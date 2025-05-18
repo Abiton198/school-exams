@@ -7,6 +7,7 @@ import ExamRules from './utils/ExamRules';
 import ProtectedRoute from './utils/ProtectedRoute';
 import ReviewPage from './components/ReviewPage';
 import AllResults from './components/AllResults';
+import { TeacherDashboard } from './components';
 import logo from './img/edu_logo.jpg';
 import Chatbot from './utils/Chatbot'
 
@@ -44,6 +45,7 @@ function App() {
           <Link to="/exam" className="hover:text-gray-300 transition">Exam</Link>
           <Link to="/results" className="hover:text-gray-300 transition">Results</Link>
           <Link to="/all-results" className="hover:text-gray-300 transition">All Results</Link>
+          <Link to="/teacher-dashboard" className="hover:text-gray-300 transition">Teacher</Link>
         </nav>
       </header>
 
@@ -54,6 +56,7 @@ function App() {
     <Link to="/exam" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Exam</Link>
     <Link to="/results" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Results</Link>
     <Link to="/all-results" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">All Results</Link>
+    <Link to="/teacher-dashboard" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Teacher</Link>
   </div>
 )}
 
@@ -84,7 +87,10 @@ function App() {
           <Route path="/all-results" element={<AllResults />} />
 
           <Route path="/exam-rules" element={<ExamRules />} />
+      <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
         </Routes>
+
+
       </div>
     </div>
   );

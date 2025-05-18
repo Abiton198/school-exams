@@ -6,13 +6,14 @@ import { getAnalytics } from "firebase/analytics";
 
 // Your Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyDbyj2wfkXKxLZyFDaBzgFwBJASOQ9tlvw",
-    authDomain: "eduplanet-exam-results.firebaseapp.com",
-    projectId: "eduplanet-exam-results",
-    storageBucket: "eduplanet-exam-results.firebasestorage.app",
-    messagingSenderId: "364922806641",
-    appId: "1:364922806641:web:fe9271a8c8fa20dd9b96d0"
-};
+    apiKey: "AIzaSyARm-7CFPXau3PbK673xG286xqtLp6UZiY",
+    authDomain: "school-exams-e891c.firebaseapp.com",
+    projectId: "school-exams-e891c",
+    storageBucket: "school-exams-e891c.firebasestorage.app",
+    messagingSenderId: "397090503790",
+    appId: "1:397090503790:web:9b160708b716c4f36d7a7f",
+    measurementId: "G-4DXZZXXS91"
+  };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

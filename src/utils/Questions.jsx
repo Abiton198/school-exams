@@ -1,5 +1,5 @@
 export const questions = {
-  "Essay Example - Grade 10": [
+  "NETWORK TECHNOLOGIES - Grade 10": [
     {
       id: 1,
       type: "written",
