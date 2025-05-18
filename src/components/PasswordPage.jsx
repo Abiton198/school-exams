@@ -39,7 +39,7 @@ export default function PasswordPage({ setStudentInfo }) {
     setErrors(newErrors);
 
     if (!hasError) {
-      setStudentInfo({ name, grade });
+      setStudentInfo({ name, grade: `Grade ${grade.replace(/[^0-9]/g, '')}` });
       navigate('/exam');
     }
   };
