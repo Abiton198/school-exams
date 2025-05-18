@@ -12,6 +12,7 @@ import logo from './img/edu_logo.jpg';
 import Chatbot from './utils/Chatbot'
 import {AdminPanel} from './components';
 import {ExamManager} from './components';
+import TeacherLoginPage from './components/TeacherLoginPage';
 
 function App() {
   const [studentInfo, setStudentInfo] = useState(null);
@@ -85,10 +86,12 @@ function App() {
          
           <Route path="/all-results" element={<AllResults />} />
           <Route path="/admin" element={<AdminPanel />} />
+          
 
           <Route path="/exam-rules" element={<ExamRules />} />
       <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
       <Route path="/exam-manager" element={<ExamManager />} />
+      <Route path="/teacher-login" element={<TeacherLoginPage />} />
         </Routes>
 
 
