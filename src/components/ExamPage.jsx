@@ -108,7 +108,7 @@ export default function ExamPage({ studentInfo, addResult }) {
     console.log('Available Grade Groups:', Object.keys(gradeGroups));
   }, [studentInfo]);
     
-
+// ExamPage.jsx (relevant parts modified only)
 const handleSubmitExam = async () => {
   const endTime = new Date();
   const startTime = new Date(localStorage.getItem('examStartTime') || new Date());
@@ -128,8 +128,11 @@ const handleSubmitExam = async () => {
   const totalQuestions = currentQuestions.length;
 
   let score = 0;
+
   currentQuestions.forEach((q) => {
-    if (answers[q.id] === q.correctAnswer) score++;
+    if ((q.type || 'mcq') === 'mcq' && answers[q.id] === q.correctAnswer) {
+      score++;
+    }
   });
 
   const percentage = ((score / totalQuestions) * 100).toFixed(2);
@@ -148,19 +151,17 @@ const handleSubmitExam = async () => {
     timeSpent: timeSpentFormatted,
     answers: currentQuestions.map(q => ({
       question: q.question,
-      answer: answers[q.id],
-      correctAnswer: q.correctAnswer
+      type: q.type || 'mcq',
+      answer: answers[q.id] || '',
+      correctAnswer: q.correctAnswer || null,
+      teacherMark: q.type === 'written' ? null : undefined,
+      maxMark: q.type === 'written' ? 5 : undefined,
     }))
   };
 
   try {
-    // 👇 Authenticate anonymously first
     const userCredential = await signInAnonymously(auth);
-    console.log("Anonymous user ID:", userCredential.user.uid);
-
-    // 👇 Now you're authenticated — save result
     await addDoc(collection(db, "examResults"), newResult);
-    console.log("Result saved to Firebase.");
   } catch (error) {
     console.error("Error saving result to Firebase:", error);
   }
