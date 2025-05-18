@@ -121,38 +121,42 @@ export default function ExamPage({ studentInfo, addResult }) {
     const startTime = new Date(localStorage.getItem('examStartTime') || new Date());
     const timeSpent = Math.round((endTime - startTime) / 1000);
     const timeSpentFormatted = `${Math.floor(timeSpent / 60)}m ${timeSpent % 60}s`;
-
+  
     const studentName = localStorage.getItem('studentName') || 'Unknown';
     const studentGrade = localStorage.getItem('studentGrade') || 'N/A';
     const examTitle = localStorage.getItem('examTitle') || 'Unnamed Exam';
     const attemptsKey = `${studentName}_${examTitle}_attempts`;
     const previousAttempts = parseInt(localStorage.getItem(attemptsKey)) || 0;
     const updatedAttempts = previousAttempts + 1;
-
+  
     let score = 0;
     let totalPossible = 0;
-
+  
     const answerData = currentQuestions.map((q) => {
       const type = q.type || 'mcq';
       const isCorrect = answers[q.id] === q.correctAnswer;
       const maxMark = type === 'written' ? parseInt(q.maxMark || 5) : 1;
-
+  
       totalPossible += maxMark;
-
       if (type === 'mcq' && isCorrect) score += 1;
-
-      return {
+  
+      const resultObj = {
         question: q.question,
         type: type,
         answer: answers[q.id] || '',
         correctAnswer: q.correctAnswer || null,
-        teacherMark: type === 'written' ? null : undefined,
         maxMark: maxMark
       };
+  
+      if (type === 'written') {
+        resultObj.teacherMark = null; // ready for manual marking
+      }
+  
+      return resultObj;
     });
-
+  
     const percentage = ((score / totalPossible) * 100).toFixed(2);
-
+  
     const result = {
       completedDate: endTime.toISOString().split('T')[0],
       completedTimeOnly: `${endTime.getHours()}:${endTime.getMinutes()}`,
@@ -166,20 +170,21 @@ export default function ExamPage({ studentInfo, addResult }) {
       timeSpent: timeSpentFormatted,
       answers: answerData
     };
-
+  
     try {
       await addDoc(collection(db, 'examResults'), result);
+      console.log("✅ Result saved to Firestore");
     } catch (err) {
       console.error('❌ Failed to save exam result:', err);
     }
-
+  
     localStorage.setItem(attemptsKey, updatedAttempts.toString());
     localStorage.setItem(`${studentName}_${examTitle}_lastAttempt`, endTime.toISOString());
-
+  
     addResult(result);
     navigate('/results');
   };
-
+  
   useEffect(() => {
     if (authenticated) {
       const timer = setInterval(() => {

@@ -9,6 +9,8 @@ export default function AllResults() {
   const [accessChecked, setAccessChecked] = useState(false);
   const [accessGranted, setAccessGranted] = useState(false);
   const [selectedResult, setSelectedResult] = useState(null);
+  const [markingData, setMarkingData] = useState(null);
+
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -85,6 +87,32 @@ export default function AllResults() {
     Swal.fire('✅ Marking complete', `Final %: ${finalPercentage}%`, 'success');
   };
 
+  const calculateUpdatedResult = (original) => {
+    let score = 0;
+    let total = 0;
+  
+    const updatedAnswers = original.answers.map(a => {
+      const maxMark = a.maxMark || (a.type === 'written' ? 5 : 1);
+      const mark = a.type === 'written' ? parseFloat(a.teacherMark || 0) : (a.answer === a.correctAnswer ? 1 : 0);
+  
+      score += mark;
+      total += maxMark;
+  
+      return { ...a, maxMark, teacherMark: a.teacherMark };
+    });
+  
+    const percentage = total ? ((score / total) * 100).toFixed(2) : '0.00';
+  
+    return {
+      ...original,
+      answers: updatedAnswers,
+      score,
+      percentage,
+      updated: true
+    };
+  };
+  
+
   return (
     <div className="max-w-6xl mx-auto p-4 pt-28">
       <h1 className="text-2xl font-bold text-center mb-6">📊 All Student Results</h1>
@@ -119,10 +147,80 @@ export default function AllResults() {
                 <button className="text-blue-600 underline" onClick={() => setSelectedResult(r)}>View</button>
                 <button className="text-purple-600 underline" onClick={() => handleManualMarking(r)}>Mark</button>
               </td>
+
+              {r.answers?.some(a => a.type === 'written' && a.teacherMark == null) && (
+                <button
+                  onClick={() => setMarkingData(r)}
+                  className="text-yellow-600 underline"
+                >
+                  Mark
+                </button>
+                )}
             </tr>
           ))}
         </tbody>
       </table>
+
+      {markingData && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+    <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+      <h2 className="text-xl font-bold mb-4">Marking: {markingData.name} - {markingData.exam}</h2>
+      {markingData.answers.filter(a => a.type === 'written').map((a, idx) => (
+        <div key={idx} className="border p-4 mb-3 rounded">
+          <p><strong>Question:</strong> {a.question}</p>
+          <p><strong>Student Answer:</strong> {a.answer}</p>
+          <label className="block mt-2 font-medium">Teacher Mark (out of {a.maxMark || 5}):</label>
+          <input
+            type="number"
+            min={0}
+            max={a.maxMark || 5}
+            value={a.teacherMark ?? ''}
+            onChange={(e) => {
+              const updated = { ...markingData };
+              updated.answers[idx].teacherMark = e.target.value;
+              setMarkingData(updated);
+            }}
+            className="w-full border px-3 py-1 rounded mt-1"
+          />
+        </div>
+      ))}
+
+      <div className="mt-6 flex justify-end space-x-4">
+        <button onClick={() => setMarkingData(null)} className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">
+          Cancel
+        </button>
+        <button
+          onClick={async () => {
+            const updatedResult = calculateUpdatedResult(markingData);
+            try {
+              const docRef = collection(db, 'examResults');
+              const querySnap = await getDocs(docRef);
+              const docToUpdate = querySnap.docs.find(doc =>
+                doc.data().name === markingData.name &&
+                doc.data().exam === markingData.exam &&
+                doc.data().completedTime === markingData.completedTime
+              );
+              if (docToUpdate) {
+                await docToUpdate.ref.update(updatedResult);
+                Swal.fire('Saved!', 'Marks updated successfully ✅', 'success');
+                setMarkingData(null);
+              } else {
+                Swal.fire('Error', 'Document not found', 'error');
+              }
+            } catch (err) {
+              console.error(err);
+              Swal.fire('Error', 'Could not save marks', 'error');
+            }
+          }}
+          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+        >
+          Save Marks
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
 
       {/* View Answer Modal */}
       {selectedResult && (
