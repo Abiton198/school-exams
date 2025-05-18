@@ -43,73 +43,76 @@ export default function AllResults() {
   const handleManualMarking = async (result) => {
     const updatedAnswers = await Promise.all(
       result.answers.map(async (a) => {
-        if (a.type !== 'written') return a;
-
-        const { value: mark } = await Swal.fire({
-          title: `Q: ${a.question}`,
-          input: 'range',
-          inputAttributes: {
-            min: 0,
-            max: a.maxMark || 5,
-            step: 1,
-          },
-          inputLabel: `Mark out of ${a.maxMark || 5}`,
-          showCancelButton: true,
-        });
-
-        return {
-          ...a,
-          teacherMark: Number(mark),
-        };
+        if (a.type === 'written') {
+          const { value: selectedMark } = await Swal.fire({
+            title: `Q: ${a.question}`,
+            input: 'select',
+            inputOptions: [...Array((a.maxMark || 5) + 1).keys()].reduce((acc, num) => {
+              acc[num] = `${num} mark${num !== 1 ? 's' : ''}`;
+              return acc;
+            }, {}),
+            inputLabel: `Mark out of ${a.maxMark || 5}`,
+            inputValue: a.teacherMark ?? 0,
+            showCancelButton: true,
+          });
+  
+          return {
+            ...a,
+            teacherMark: parseInt(selectedMark),
+          };
+        }
+  
+        // For MCQs - teacher can manually confirm correctness
+        if (a.type === 'mcq') {
+          const { isConfirmed } = await Swal.fire({
+            title: `Q: ${a.question}`,
+            html: `
+              <p><strong>Student's Answer:</strong> ${a.answer}</p>
+              <p><strong>Correct Answer:</strong> ${a.correctAnswer}</p>
+              <p>Is this answer correct?</p>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Yes',
+            cancelButtonText: 'No'
+          });
+  
+          return {
+            ...a,
+            teacherOverrideCorrect: isConfirmed
+          };
+        }
+  
+        return a;
       })
     );
-
-    const totalWritten = updatedAnswers.reduce((sum, a) =>
-      a.type === 'written' ? sum + (a.teacherMark || 0) : sum, 0
-    );
-    const autoScore = updatedAnswers.reduce((sum, a) =>
-      a.type === 'mcq' && a.answer === a.correctAnswer ? sum + 1 : sum, 0
-    );
-
-    const maxWritten = updatedAnswers.reduce((sum, a) =>
-      a.type === 'written' ? sum + (a.maxMark || 5) : sum, 0
-    );
-
-    const totalPossible = (result.answers.length - updatedAnswers.filter(a => a.type === 'written').length) + maxWritten;
-    const finalPercentage = (((autoScore + totalWritten) / totalPossible) * 100).toFixed(2);
-
+  
+    // Recalculate scores
+    const writtenTotal = updatedAnswers
+      .filter(a => a.type === 'written')
+      .reduce((sum, a) => sum + (a.teacherMark || 0), 0);
+  
+    const maxWritten = updatedAnswers
+      .filter(a => a.type === 'written')
+      .reduce((sum, a) => sum + (a.maxMark || 5), 0);
+  
+    const mcqScore = updatedAnswers
+      .filter(a => a.type === 'mcq')
+      .reduce((sum, a) => {
+        if (a.teacherOverrideCorrect === true) return sum + 1;
+        return a.answer === a.correctAnswer ? sum + 1 : sum;
+      }, 0);
+  
+    const totalPossible = maxWritten + updatedAnswers.filter(a => a.type === 'mcq').length;
+    const totalScore = writtenTotal + mcqScore;
+    const finalPercentage = ((totalScore / totalPossible) * 100).toFixed(2);
+  
     await updateDoc(doc(db, 'examResults', result.id), {
       answers: updatedAnswers,
-      score: autoScore + totalWritten,
-      percentage: finalPercentage,
-    });
-
-    Swal.fire('✅ Marking complete', `Final %: ${finalPercentage}%`, 'success');
-  };
-
-  const calculateUpdatedResult = (original) => {
-    let score = 0;
-    let total = 0;
-  
-    const updatedAnswers = original.answers.map(a => {
-      const maxMark = a.maxMark || (a.type === 'written' ? 5 : 1);
-      const mark = a.type === 'written' ? parseFloat(a.teacherMark || 0) : (a.answer === a.correctAnswer ? 1 : 0);
-  
-      score += mark;
-      total += maxMark;
-  
-      return { ...a, maxMark, teacherMark: a.teacherMark };
+      score: totalScore,
+      percentage: finalPercentage
     });
   
-    const percentage = total ? ((score / total) * 100).toFixed(2) : '0.00';
-  
-    return {
-      ...original,
-      answers: updatedAnswers,
-      score,
-      percentage,
-      updated: true
-    };
+    Swal.fire('✅ Final Mark Saved', `Student's Final %: ${finalPercentage}%`, 'success');
   };
   
 

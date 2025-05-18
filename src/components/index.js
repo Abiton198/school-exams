@@ -9,3 +9,5 @@ export { default as ResultsListPage } from "./ResultsListPage";
 export { default as AllResults } from "./AllResults";
 export { default as StatisticsPanel } from "./StatisticsPanel";
 export { default as TeacherDashboard } from "./TeacherDashboard";
+export { default as ExamManager } from "./ExamManager";
+export { default as AdminPanel } from "./AdminPanel";

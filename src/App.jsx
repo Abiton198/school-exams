@@ -10,6 +10,8 @@ import AllResults from './components/AllResults';
 import { TeacherDashboard } from './components';
 import logo from './img/edu_logo.jpg';
 import Chatbot from './utils/Chatbot'
+import {AdminPanel} from './components';
+import {ExamManager} from './components';
 
 function App() {
   const [studentInfo, setStudentInfo] = useState(null);
@@ -43,9 +45,7 @@ function App() {
         <nav className="hidden md:flex space-x-6">
           <Link to="/exam-rules" className="hover:text-gray-300 transition">Exam Rules</Link>
           <Link to="/exam" className="hover:text-gray-300 transition">Exam</Link>
-          <Link to="/results" className="hover:text-gray-300 transition">Results</Link>
-          <Link to="/all-results" className="hover:text-gray-300 transition">All Results</Link>
-          <Link to="/teacher-dashboard" className="hover:text-gray-300 transition">Teacher</Link>
+          <Link to="/admin" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Admin</Link>
         </nav>
       </header>
 
@@ -54,9 +54,8 @@ function App() {
   <div className="md:hidden absolute top-20 left-0 w-full bg-white/90 text-blue-900 px-4 py-4 space-y-3 shadow-xl z-50 backdrop-blur-md">
     <Link to="/exam-rules" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Exam Rules</Link>
     <Link to="/exam" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Exam</Link>
-    <Link to="/results" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Results</Link>
-    <Link to="/all-results" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">All Results</Link>
-    <Link to="/teacher-dashboard" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Teacher</Link>
+    <Link to="/admin" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Admin</Link>
+   
   </div>
 )}
 
@@ -85,9 +84,11 @@ function App() {
           />
          
           <Route path="/all-results" element={<AllResults />} />
+          <Route path="/admin" element={<AdminPanel />} />
 
           <Route path="/exam-rules" element={<ExamRules />} />
       <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
+      <Route path="/exam-manager" element={<ExamManager />} />
         </Routes>
 
 
