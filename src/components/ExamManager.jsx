@@ -1,37 +1,39 @@
 // src/components/ExamManager.jsx
 import React, { useEffect, useState } from 'react';
 import { collection, getDocs, deleteDoc, doc, updateDoc, query, where } from 'firebase/firestore';
-import { db } from '../utils/firebase';
 import Swal from 'sweetalert2';
+import { auth, signInAnonymously, db } from '../utils/firebase';
+
+
+
 
 export default function ExamManager() {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const teacherSubject = localStorage.getItem('teacherSubject') || '';
   const teacherName = localStorage.getItem('teacherName') || '';
+  
+
+  // user authenticated
+  useEffect(() => {
+    signInAnonymously(auth)
+      .then(() => console.log("✅ Anonymous sign-in"))
+      .catch((err) => console.error("❌ Auth error", err));
+  }, []);
 
   // Fetch exams matching the subject of the logged-in teacher
   useEffect(() => {
     const fetchExams = async () => {
       try {
-        const q = query(
-          collection(db, 'exams'),
-          where('subject', '==', teacherSubject)
-        );
-        const snapshot = await getDocs(q);
-        const fetchedExams = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-
-        setExams(fetchedExams);
-        setLoading(false);
+        console.log("🔥 Current UID:", auth.currentUser?.uid);
+        const snapshot = await getDocs(collection(db, 'exams'));
+        const exams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log("✅ Exams fetched:", exams);
       } catch (err) {
-        console.error('❌ Error fetching exams:', err);
+        console.error("❌ Error fetching exams:", err);
+      }
         setLoading(false);
       }
-    };
-
     fetchExams();
   }, [teacherSubject]);
 

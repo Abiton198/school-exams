@@ -1,5 +1,5 @@
 // src/components/TeacherLoginPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { teacherList } from '../data/teacherList';
 
@@ -8,6 +8,15 @@ export default function TeacherLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const teacher = localStorage.getItem('teacherInfo');
+    if (teacher) {
+      localStorage.setItem('teacherInfo', JSON.stringify(found));
+      localStorage.setItem('teacherLoginTime', Date.now());
+      navigate('/teacher-dashboard');
+    }
+  }, []);
 
   const handleLogin = () => {
     if (!selectedTeacher || !password) {

@@ -13,6 +13,7 @@ import Chatbot from './utils/Chatbot'
 import {AdminPanel} from './components';
 import {ExamManager} from './components';
 import TeacherLoginPage from './components/TeacherLoginPage';
+import ProtectedTeacherRoute from './utils/ProtectedTeacherRoute'; // 👈 Add this import
 
 function App() {
   const [studentInfo, setStudentInfo] = useState(null);
@@ -83,14 +84,25 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+            <Route path="/teacher-dashboard" element={
+              <ProtectedTeacherRoute>
+                <TeacherDashboard />
+              </ProtectedTeacherRoute>
+            } />
+
+            <Route path="/exam-manager" element={
+              <ProtectedTeacherRoute>
+                <ExamManager />
+              </ProtectedTeacherRoute>
+            } />
+
          
           <Route path="/all-results" element={<AllResults />} />
           <Route path="/admin" element={<AdminPanel />} />
           
 
           <Route path="/exam-rules" element={<ExamRules />} />
-      <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
-      <Route path="/exam-manager" element={<ExamManager />} />
       <Route path="/teacher-login" element={<TeacherLoginPage />} />
         </Routes>
 
