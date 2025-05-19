@@ -13,7 +13,8 @@ import Chatbot from './utils/Chatbot'
 import {AdminPanel} from './components';
 import {ExamManager} from './components';
 import TeacherLoginPage from './components/TeacherLoginPage';
-import ProtectedTeacherRoute from './utils/ProtectedTeacherRoute'; // 👈 Add this import
+import ProtectedTeacherRoute from './utils/ProtectedTeacherRoute'; 
+import StudentExamDashboard from './components/StudentExamDashboard';
 
 function App() {
   const [studentInfo, setStudentInfo] = useState(null);
@@ -46,8 +47,8 @@ function App() {
         {/* Desktop Menu */}
         <nav className="hidden md:flex space-x-6">
           <Link to="/exam-rules" className="hover:text-gray-300 transition">Exam Rules</Link>
-          <Link to="/exam" className="hover:text-gray-300 transition">Exam</Link>
-          <Link to="/admin" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Admin</Link>
+          <Link to="/student-dashboard" className="hover:text-gray-300 transition">Student</Link>
+          <Link to="/admin" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Teacher</Link>
         </nav>
       </header>
 
@@ -55,8 +56,8 @@ function App() {
       {menuOpen && (
   <div className="md:hidden absolute top-20 left-0 w-full bg-white/90 text-blue-900 px-4 py-4 space-y-3 shadow-xl z-50 backdrop-blur-md">
     <Link to="/exam-rules" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Exam Rules</Link>
-    <Link to="/exam" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Exam</Link>
-    <Link to="/admin" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Admin</Link>
+    <Link to="/student-dashboard" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Student</Link>
+    <Link to="/admin" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Teacher</Link>
    
   </div>
 )}
@@ -97,6 +98,15 @@ function App() {
               </ProtectedTeacherRoute>
             } />
 
+{/* student dashboard */}
+        <Route
+          path="/student-dashboard"
+          element={
+            <ProtectedRoute studentInfo={studentInfo}>
+              <StudentExamDashboard studentInfo={studentInfo} />
+            </ProtectedRoute>
+          }
+        />
          
           <Route path="/all-results" element={<AllResults />} />
           <Route path="/admin" element={<AdminPanel />} />
