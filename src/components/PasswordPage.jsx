@@ -48,7 +48,7 @@ export default function PasswordPage({ setStudentInfo }) {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6">
       <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
         <h1 className="text-3xl font-bold mb-6 text-center text-blue-700">
-          Welcome to EduPlanet CAT Exams
+          Amic Hub Exam & Study Platform
         </h1>
 
         <select
@@ -110,7 +110,7 @@ export default function PasswordPage({ setStudentInfo }) {
 
         <button
           onClick={handleLogin}
-          className="w-full bg-blue-500 hover:bg-blue-600 text-white p-3 rounded font-semibold"
+          className="w-full bg-violet-500 hover:bg-blue-600 text-white p-3 rounded font-semibold"
         >
           Enter Exam
         </button>

@@ -8,7 +8,7 @@ import ProtectedRoute from './utils/ProtectedRoute';
 import ReviewPage from './components/ReviewPage';
 import AllResults from './components/AllResults';
 import { TeacherDashboard } from './components';
-import logo from './img/edu_logo.jpg';
+import amic_hub from './img/amic_hub.png';
 import Chatbot from './utils/Chatbot'
 import {AdminPanel} from './components';
 import {ExamManager} from './components';
@@ -28,9 +28,9 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header Section */}
-      <header className="fixed top-0 left-0 w-full flex justify-between items-center p-4 bg-blue-600 text-white shadow-md z-50">
+      <header className="fixed top-0 left-0 w-full flex justify-between items-center p-4 bg-violet-400 text-white shadow-md z-50">
         <Link to="/" className="flex items-center space-x-2">
-          <img src={logo} alt="Eduplanet Logo" className="h-14 w-auto rounded-md shadow-md" />
+          <img src={amic_hub} alt="Eduplanet Logo" className="h-14 w-auto rounded-full shadow-md" />
           <span className="text-xl font-bold">CAT Online</span>
         </Link>
 

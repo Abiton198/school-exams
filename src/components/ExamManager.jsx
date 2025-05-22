@@ -16,27 +16,36 @@ export default function ExamManager() {
 
   // user authenticated
   useEffect(() => {
-    signInAnonymously(auth)
-      .then(() => console.log("✅ Anonymous sign-in"))
-      .catch((err) => console.error("❌ Auth error", err));
-  }, []);
-
-  // Fetch exams matching the subject of the logged-in teacher
-  useEffect(() => {
-    const fetchExams = async () => {
+    const authenticateAndFetch = async () => {
       try {
-        console.log("🔥 Current UID:", auth.currentUser?.uid);
-        const snapshot = await getDocs(collection(db, 'exams'));
-        const exams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        console.log("✅ Exams fetched:", exams);
+        // 1. Sign in anonymously
+        await signInAnonymously(auth);
+        console.log("✅ Anonymous sign-in");
+  
+        // 2. Wait for auth state to confirm user is set
+        const unsubscribe = auth.onAuthStateChanged(async (user) => {
+          if (user) {
+            console.log("🔥 Authenticated UID:", user.uid);
+  
+            // 3. Now fetch exams
+            const snapshot = await getDocs(collection(db, 'exams'));
+            const fetchedExams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            console.log("✅ Exams fetched:", fetchedExams);
+            setExams(fetchedExams);
+            setLoading(false);
+          }
+        });
+  
+        return () => unsubscribe();
       } catch (err) {
-        console.error("❌ Error fetching exams:", err);
-      }
+        console.error("❌ Auth or fetch error:", err);
         setLoading(false);
       }
-    fetchExams();
+    };
+  
+    authenticateAndFetch();
   }, [teacherSubject]);
-
+  
   // Handle deleting an exam
   const handleDelete = async (examId) => {
     const confirm = await Swal.fire({
