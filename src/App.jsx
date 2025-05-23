@@ -9,17 +9,21 @@ import ReviewPage from './components/ReviewPage';
 import AllResults from './components/AllResults';
 import { TeacherDashboard } from './components';
 import amic_hub from './img/amic_hub.png';
-import Chatbot from './utils/Chatbot'
-import {AdminPanel} from './components';
-import {ExamManager} from './components';
+import Chatbot from './utils/Chatbot';
+import { AdminPanel } from './components';
+import { ExamManager } from './components';
 import TeacherLoginPage from './components/TeacherLoginPage';
-import ProtectedTeacherRoute from './utils/ProtectedTeacherRoute'; 
+import ProtectedTeacherRoute from './utils/ProtectedTeacherRoute';
 import StudentExamDashboard from './components/StudentExamDashboard';
+
+
+
 
 function App() {
   const [studentInfo, setStudentInfo] = useState(null);
   const [results, setResults] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
   const addResult = (result) => {
     setResults([...results, result]);
@@ -31,7 +35,7 @@ function App() {
       <header className="fixed top-0 left-0 w-full flex justify-between items-center p-4 bg-violet-400 text-white shadow-md z-50">
         <Link to="/" className="flex items-center space-x-2">
           <img src={amic_hub} alt="Eduplanet Logo" className="h-14 w-auto rounded-full shadow-md" />
-          <span className="text-xl font-bold">CAT Online</span>
+          <span className="text-xl font-bold">Study & Exam Online</span>
         </Link>
 
         {/* Hamburger Menu (mobile only) */}
@@ -48,21 +52,36 @@ function App() {
         <nav className="hidden md:flex space-x-6">
           <Link to="/exam-rules" className="hover:text-gray-300 transition">Exam Rules</Link>
           <Link to="/student-dashboard" className="hover:text-gray-300 transition">Student</Link>
-          <Link to="/admin" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Teacher</Link>
+          <Link to="/admin" className="hover:text-gray-300 transition">Teacher</Link>
+          <button
+            onClick={() => setShowChat(true)}
+            className="hover:text-yellow-200 transition"
+          >
+            Study
+          </button>
         </nav>
       </header>
 
       {/* Mobile Menu (when open) */}
       {menuOpen && (
-  <div className="md:hidden absolute top-20 left-0 w-full bg-white/90 text-blue-900 px-4 py-4 space-y-3 shadow-xl z-50 backdrop-blur-md">
-    <Link to="/exam-rules" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Exam Rules</Link>
-    <Link to="/student-dashboard" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Student</Link>
-    <Link to="/admin" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Teacher</Link>
-   
-  </div>
-)}
+        <div className="md:hidden absolute top-20 left-0 w-full bg-white/90 text-blue-900 px-4 py-4 space-y-3 shadow-xl z-50 backdrop-blur-md">
+          <Link to="/exam-rules" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Exam Rules</Link>
+          <Link to="/student-dashboard" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Student</Link>
+          <Link to="/admin" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Teacher</Link>
+          <button
+            onClick={() => {
+              setShowChat(true);
+              setMenuOpen(false);
+            }}
+            className="block text-left w-full hover:text-blue-500"
+          >
+            Study
+          </button>
+        </div>
+      )}
 
-          <Chatbot/>
+      {/* Chatbot Popup */}
+      {showChat && <Chatbot forceOpen={true} onClose={() => setShowChat(false)} />}
 
       {/* Main Content Section */}
       <div className="pt-28">
@@ -77,6 +96,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/results"
             element={
@@ -85,38 +105,35 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-            <Route path="/teacher-dashboard" element={
+          <Route
+            path="/teacher-dashboard"
+            element={
               <ProtectedTeacherRoute>
                 <TeacherDashboard />
               </ProtectedTeacherRoute>
-            } />
-
-            <Route path="/exam-manager" element={
+            }
+          />
+          <Route
+            path="/exam-manager"
+            element={
               <ProtectedTeacherRoute>
                 <ExamManager />
               </ProtectedTeacherRoute>
-            } />
-
-{/* student dashboard */}
-        <Route
-          path="/student-dashboard"
-          element={
-            <ProtectedRoute studentInfo={studentInfo}>
-              <StudentExamDashboard studentInfo={studentInfo} />
-            </ProtectedRoute>
-          }
-        />
-         
+            }
+          />
+          <Route
+            path="/student-dashboard"
+            element={
+              <ProtectedRoute studentInfo={studentInfo}>
+                <StudentExamDashboard studentInfo={studentInfo} />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/all-results" element={<AllResults />} />
           <Route path="/admin" element={<AdminPanel />} />
-          
-
           <Route path="/exam-rules" element={<ExamRules />} />
-      <Route path="/teacher-login" element={<TeacherLoginPage />} />
+          <Route path="/teacher-login" element={<TeacherLoginPage />} />
         </Routes>
-
-
       </div>
     </div>
   );

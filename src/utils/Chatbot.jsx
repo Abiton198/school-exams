@@ -1,14 +1,15 @@
 // utils/Chatbot.jsx
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import logo from '../img/edu_logo.jpg';
+import amic_hub from '../img/amic_hub.png';
 
-export default function Chatbot() {
+export default function Chatbot({ forceOpen = false, onClose }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [showChat, setShowChat] = useState(false);
-  const [showPopup, setShowPopup] = useState(true);
   const isExamPage = location.pathname === '/exam';
+
+  const [showChat, setShowChat] = useState(forceOpen);
+  const [showPopup, setShowPopup] = useState(!forceOpen);
 
   useEffect(() => {
     if (isExamPage) {
@@ -36,6 +37,8 @@ export default function Chatbot() {
         botId: '8f1fd171-6783-4645-a335-f92c6b1aafb8',
         clientId: '2ddf09b2-2eac-4542-add4-9fdd64391d83',
         selector: '#webchat',
+        conversationId: undefined, // let it create a fresh one
+        botConversationDescription: 'Welcome to Amic Hub CAT Study Assistant!',
         configuration: {
           color: '#5eb1ef',
           variant: 'soft',
@@ -44,7 +47,12 @@ export default function Chatbot() {
           radius: 1,
           botName: 'Eduplanet CAT Assistant',
           avatarUrl: 'https://botpress.com/favicon.ico',
-          botConversationDescription: 'Welcome to Eduplanet School CAT Online. Setting you for success through study.',
+          enableReset: true,
+          enableTranscriptDownload: true,
+          disableAnimations: false,
+          stylesheet: '',
+          layoutWidth: '420px',
+          startBehavior: 'send-welcome-event', // 👈 this ensures bot starts chat      
         },
       });
     };
@@ -72,9 +80,12 @@ export default function Chatbot() {
     if (root) {
       root.classList.remove('hide-everything-except-chat');
     }
-    navigate('/');
+    if (onClose) {
+      onClose();
+    } else {
+      navigate('/');
+    }
   };
-
 
   return (
     <>
@@ -105,10 +116,10 @@ export default function Chatbot() {
             }}
           >
             <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1a202c', marginBottom: '1rem' }}>
-              Welcome to Eduplanet School CAT Online
+              Welcome to Amic Hub Study Platform 
             </h2>
-            <p style={{ marginBottom: '1.5rem', color: '#4a5568' }}> Only Grade 12 can chose Study!
-              Success is calling — and it says you're awesome! Review the week's lessons, then show that exam who's the boss.
+            <p style={{ marginBottom: '1.5rem', color: '#4a5568' }}>
+              This Chatbox is limited to CAT students Grade 12 only.
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
               <button
@@ -161,14 +172,11 @@ export default function Chatbot() {
             justifyContent: 'center',
           }}
         >
-        <div className='mt-52'>
-          <img src={logo} alt="Eduplanet Logo" className="h-14 w-auto rounded-md shadow-md" />
-
-        </div>
-
-          <p className='mt-5'>Click the chatbox to start!</p>
+          <div className="mt-52">
+            <img src={amic_hub} alt="Eduplanet Logo" className="h-14 w-auto rounded-md shadow-md" />
+          </div>
+          <p className="mt-5">Click the chatbox to start!</p>
           <div id="webchat" style={{ width: '90%', maxWidth: '420px', height: '520px' }} />
-
           <button
             onClick={handleBackHome}
             style={{
@@ -178,7 +186,6 @@ export default function Chatbot() {
               padding: '0.6rem 1.25rem',
               border: 'none',
               borderRadius: '8px',
-             
               cursor: 'pointer',
             }}
           >

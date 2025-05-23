@@ -15,16 +15,20 @@ export default function TeacherLoginPage() {
       setError('Please select a name and enter password.');
       return;
     }
-
+  
     if (selectedTeacher.password === password) {
+      // ✅ Save teacher info into localStorage
       localStorage.setItem('teacherInfo', JSON.stringify(selectedTeacher));
-      localStorage.setItem('teacherLoginTime', Date.now());
+      localStorage.setItem('teacherLoginTime', Date.now().toString());
+      localStorage.setItem('teacherName', selectedTeacher.name);
+      localStorage.setItem('teacherSubject', selectedTeacher.subject);
+  
       navigate('/teacher-dashboard');
     } else {
       setError('❌ Incorrect password');
     }
   };
-
+  
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 pt-28">
       <div className="bg-white p-6 rounded shadow max-w-sm w-full">

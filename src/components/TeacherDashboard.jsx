@@ -97,7 +97,8 @@ export default function TeacherDashboard() {
         grade,
         password,
         subject: teacherInfo.subject, // ✅ Save subject for student dashboard grouping
-        questions
+        questions,
+        createdBy: localStorage.getItem('teacherName') || ''
       });
 
       Swal.fire('✅ Success', 'Exam saved successfully!', 'success');
