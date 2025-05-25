@@ -1,20 +1,28 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { auth } from '../utils/firebase';
 
-const ProtectedTeacherRoute = ({ children }) => {
-  const teacherInfo = JSON.parse(localStorage.getItem('teacherInfo'));
-  const loginTime = parseInt(localStorage.getItem('teacherLoginTime'), 10);
-  const now = Date.now();
-  const maxSessionTime = 60 * 60 * 1000; // ⏱ 1 hour in milliseconds
+export default function ProtectedTeacherRoute({ children }) {
+  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  if (!teacherInfo || !loginTime || now - loginTime > maxSessionTime) {
-    // ⛔ Session expired or no login
-    localStorage.removeItem('teacherInfo');
-    localStorage.removeItem('teacherLoginTime');
-    return <Navigate to="/teacher-login" replace />;
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setIsAuthenticated(!!user);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  
+  if (loading) {
+    return (
+      <div className="text-center mt-20 text-gray-500 text-lg">
+        Loading your dashboard...
+      </div>
+    );
   }
 
-  return children;
-};
-
-export default ProtectedTeacherRoute;
+  return isAuthenticated ? children : <Navigate to="/teacher-login" />;
+}

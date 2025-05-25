@@ -15,6 +15,7 @@ import { ExamManager } from './components';
 import TeacherLoginPage from './components/TeacherLoginPage';
 import ProtectedTeacherRoute from './utils/ProtectedTeacherRoute';
 import StudentExamDashboard from './components/StudentExamDashboard';
+import TeacherSignupPage from './utils/TeacherSignupPage';
 
 
 
@@ -133,6 +134,7 @@ function App() {
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/exam-rules" element={<ExamRules />} />
           <Route path="/teacher-login" element={<TeacherLoginPage />} />
+          <Route path="/teacher-signup" element={<TeacherSignupPage />} />
         </Routes>
       </div>
     </div>
