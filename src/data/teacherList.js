@@ -1,5 +1,5 @@
 // src/data/teacherList.js
-export const teacherList = [
+export const teacherCredentials = [
   { name: 'Mr. Abiton', subject: 'CAT', password: 'cat123' },
   { name: 'Mrs. Erasmus', subject: 'Mathematics', password: 'maths123' },
   { name: 'Mrs. Swanepoel', subject: 'English', password: 'eng123' },

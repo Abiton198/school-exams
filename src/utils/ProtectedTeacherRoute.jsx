@@ -8,20 +8,19 @@ export default function ProtectedTeacherRoute({ children }) {
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
-      setIsAuthenticated(!!user);
+      const localTeacher = localStorage.getItem('teacherInfo');
+      const loggedIn = !!user || !!localTeacher;
+
+      console.log("🔐 Auth state changed:", user ? user.uid : "No user", "| Manual:", !!localTeacher);
+      setIsAuthenticated(loggedIn);
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-  
   if (loading) {
-    return (
-      <div className="text-center mt-20 text-gray-500 text-lg">
-        Loading your dashboard...
-      </div>
-    );
+    return <div className="text-center mt-20 text-gray-500 text-lg">Loading your dashboard...</div>;
   }
 
   return isAuthenticated ? children : <Navigate to="/teacher-login" />;
