@@ -109,17 +109,17 @@ function App() {
           <Route
             path="/teacher-dashboard"
             element={
-              <ProtectedTeacherRoute>
                 <TeacherDashboard />
-              </ProtectedTeacherRoute>
+              // <ProtectedTeacherRoute>
+              // </ProtectedTeacherRoute>
             }
           />
           <Route
             path="/exam-manager"
             element={
-              <ProtectedTeacherRoute>
                 <ExamManager />
-              </ProtectedTeacherRoute>
+              // <ProtectedTeacherRoute>
+              // </ProtectedTeacherRoute>
             }
           />
           <Route

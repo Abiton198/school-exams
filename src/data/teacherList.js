@@ -1,9 +1,8 @@
-// src/data/teacherList.js
 export const teacherCredentials = [
-  { name: 'Mr. Abiton', subject: 'CAT', password: 'cat123' },
-  { name: 'Mrs. Erasmus', subject: 'Mathematics', password: 'maths123' },
-  { name: 'Mrs. Swanepoel', subject: 'English', password: 'eng123' },
-  { name: 'Mrs. Jabavu', subject: 'Life Sciences', password: 'life123' },
-  { name: 'Mr. Botha', subject: 'Geograph', password: 'geo123' },
-  { name: 'Mr. Walter', subject: 'Physics', password: 'life123' },
+  { email: 'abiton@eduplanet.co.za', name: 'Mr. Abiton', subject: 'CAT' },
+  { email: 'erasmus@eduplanet.co.za', name: 'Mrs. Erasmus', subject: 'Mathematics' },
+  { email: 'swanepoel@eduplanet.co.za', name: 'Mrs. Swanepoel', subject: 'English' },
+  { email: 'jabavu@school.com', name: 'Mrs. Jabavu', subject: 'Life Sciences' },
+  { email: 'chris@eduplanet.co.za', name: 'Mr. Chris', subject: 'Admin' },
+  { email: 'walter@school.com', name: 'Mr. Walter', subject: 'Physics' },
 ];
