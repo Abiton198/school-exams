@@ -1,7 +1,8 @@
-// PasswordPage.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { studentList } from '../data/studentData';
+import { db } from '../utils/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 export default function PasswordPage({ setStudentInfo }) {
   const [grade, setGrade] = useState('');
@@ -13,7 +14,7 @@ export default function PasswordPage({ setStudentInfo }) {
 
   const navigate = useNavigate();
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     let hasError = false;
     const newErrors = { name: false, grade: false, password: false };
     setError('');
@@ -38,9 +39,24 @@ export default function PasswordPage({ setStudentInfo }) {
 
     setErrors(newErrors);
 
-    if (!hasError) {
-      setStudentInfo({ name, grade: `Grade ${grade.replace(/[^0-9]/g, '')}` });
+    if (hasError) return;
+
+    try {
+      const cleanedGrade = `Grade ${grade.replace(/[^0-9A-Za-z]/g, '')}`;
+      const studentId = `${cleanedGrade}_${name.replace(/\s/g, '').toLowerCase()}`;
+
+      await setDoc(doc(db, 'students', studentId), {
+        name,
+        grade: cleanedGrade,
+        studentId,
+        createdAt: new Date()
+      });
+
+      setStudentInfo({ name, grade: cleanedGrade, studentId });
       navigate('/exam');
+    } catch (err) {
+      console.error('Firestore error:', err);
+      setError('An error occurred while logging in. Please try again.');
     }
   };
 
@@ -51,15 +67,14 @@ export default function PasswordPage({ setStudentInfo }) {
           Amic Hub Exam & Study Platform
         </h1>
 
+        {/* Grade Selection */}
         <select
           value={grade}
           onChange={(e) => {
             setGrade(e.target.value);
             setName('');
           }}
-          className={`w-full p-3 mb-2 border ${
-            errors.grade ? 'border-red-500' : 'border-gray-300'
-          } rounded text-black`}
+          className={`w-full p-3 mb-2 border ${errors.grade ? 'border-red-500' : 'border-gray-300'} rounded text-black`}
         >
           <option value="">Select your grade</option>
           {Object.keys(studentList).map((g) => (
@@ -68,13 +83,12 @@ export default function PasswordPage({ setStudentInfo }) {
         </select>
         {errors.grade && <p className="text-red-500 text-sm mb-2">Please select a valid grade.</p>}
 
+        {/* Name Selection */}
         {grade && studentList[grade] && (
           <select
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className={`w-full p-3 mb-2 border ${
-              errors.name ? 'border-red-500' : 'border-gray-300'
-            } rounded text-black`}
+            className={`w-full p-3 mb-2 border ${errors.name ? 'border-red-500' : 'border-gray-300'} rounded text-black`}
           >
             <option value="">Select your name</option>
             {studentList[grade].map((student) => (
@@ -84,15 +98,14 @@ export default function PasswordPage({ setStudentInfo }) {
         )}
         {errors.name && <p className="text-red-500 text-sm mb-2">Please select your name.</p>}
 
+        {/* Password Input */}
         <div className="relative mb-2">
           <input
             type={showPassword ? 'text' : 'password'}
             placeholder="Enter your unique password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={`w-full p-3 border ${
-              errors.password ? 'border-red-500' : 'border-gray-300'
-            } rounded text-black`}
+            className={`w-full p-3 border ${errors.password ? 'border-red-500' : 'border-gray-300'} rounded text-black`}
           />
           <label className="flex items-center mt-2 text-sm">
             <input
@@ -104,10 +117,10 @@ export default function PasswordPage({ setStudentInfo }) {
             Show password
           </label>
         </div>
-        {errors.password && (
-          <p className="text-red-500 text-sm mb-4">{error}</p>
-        )}
+        {errors.password && <p className="text-red-500 text-sm mb-4">{error}</p>}
+        {error && !errors.password && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
+        {/* Submit Button */}
         <button
           onClick={handleLogin}
           className="w-full bg-violet-500 hover:bg-blue-600 text-white p-3 rounded font-semibold"

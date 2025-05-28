@@ -16,6 +16,9 @@ import TeacherLoginPage from './components/TeacherLoginPage';
 import ProtectedTeacherRoute from './utils/ProtectedTeacherRoute';
 import StudentExamDashboard from './components/StudentExamDashboard';
 import TeacherSignupPage from './utils/TeacherSignupPage';
+import ParentDashboard from './components/ParentDashboard';
+import ParentLinkForm from './components/ParentLinkForm';
+
 
 
 
@@ -53,6 +56,7 @@ function App() {
         <nav className="hidden md:flex space-x-6">
           <Link to="/exam-rules" className="hover:text-gray-300 transition">Exam Rules</Link>
           <Link to="/student-dashboard" className="hover:text-gray-300 transition">Student</Link>
+          <Link to="/parent-link" className="hover:text-gray-300 transition">Parent</Link>
           <Link to="/admin" className="hover:text-gray-300 transition">Teacher</Link>
           <button
             onClick={() => setShowChat(true)}
@@ -68,6 +72,7 @@ function App() {
         <div className="md:hidden absolute top-20 left-0 w-full bg-white/90 text-blue-900 px-4 py-4 space-y-3 shadow-xl z-50 backdrop-blur-md">
           <Link to="/exam-rules" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Exam Rules</Link>
           <Link to="/student-dashboard" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Student</Link>
+          <Link to="/parent-link" className="hover:text-gray-300 transition">Parent</Link>
           <Link to="/admin" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Teacher</Link>
           <button
             onClick={() => {
@@ -110,16 +115,14 @@ function App() {
             path="/teacher-dashboard"
             element={
                 <TeacherDashboard />
-              // <ProtectedTeacherRoute>
-              // </ProtectedTeacherRoute>
+              
             }
           />
           <Route
             path="/exam-manager"
             element={
                 <ExamManager />
-              // <ProtectedTeacherRoute>
-              // </ProtectedTeacherRoute>
+           
             }
           />
           <Route
@@ -135,6 +138,9 @@ function App() {
           <Route path="/exam-rules" element={<ExamRules />} />
           <Route path="/teacher-login" element={<TeacherLoginPage />} />
           <Route path="/teacher-signup" element={<TeacherSignupPage />} />
+          <Route path="/parent-dashboard" element={<ParentDashboard parentId="parent123" />} />
+          <Route path="/parent-link" element={<ParentLinkForm />} />
+
         </Routes>
       </div>
     </div>

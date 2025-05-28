@@ -13,3 +13,5 @@ export { default as ExamManager } from "./ExamManager";
 export { default as AdminPanel } from "./AdminPanel";
 export { default as TeacherLoginPage } from "./TeacherLoginPage";
 export { default as StudentExamDashboard } from "./StudentExamDashboard";
+export { default as ParentDashboard } from "./ParentDashboard";
+export { default as ParentLinkForm } from "./ParentLinkForm";
