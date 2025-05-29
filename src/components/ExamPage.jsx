@@ -193,24 +193,43 @@ export default function ExamPage({ studentInfo, addResult }) {
 
       {/* Action Cards */}
       {selectedSubject && !viewing && (
-        <div className="max-w-3xl mx-auto mt-10">
-          <h2 className="text-xl font-semibold mb-4 text-center">What would you like to do in {selectedSubject}?</h2>
-          <div className="flex gap-6 justify-center">
-            <div
-              className="bg-blue-100 hover:bg-blue-200 p-6 rounded shadow cursor-pointer text-center w-40"
-              onClick={() => setViewing('exams')}
-            >
-              <h3 className="font-bold text-blue-800">📘 Take Exam</h3>
-            </div>
-            <div
-              className="bg-green-100 hover:bg-green-200 p-6 rounded shadow cursor-pointer text-center w-40"
-              onClick={() => setViewing('results')}
-            >
-              <h3 className="font-bold text-green-800">📄 View Results</h3>
-            </div>
-          </div>
-        </div>
-      )}
+  <div className="max-w-3xl mx-auto mt-10">
+    <h2 className="text-xl font-semibold mb-4 text-center">
+      What would you like to do in {selectedSubject}?
+    </h2>
+
+    {/* 🧭 Action Cards */}
+    <div className="flex gap-6 justify-center flex-wrap">
+      
+      {/* 📘 Take Exam Card */}
+      <div
+        className="bg-blue-100 hover:bg-blue-200 p-6 rounded shadow cursor-pointer text-center w-40"
+        onClick={() => setViewing('exams')}
+      >
+        <h3 className="font-bold text-blue-800">📘 Take Exam</h3>
+      </div>
+
+      {/* 📄 View Results Card */}
+      <div
+        className="bg-green-100 hover:bg-green-200 p-6 rounded shadow cursor-pointer text-center w-40"
+        onClick={() => setViewing('results')}
+      >
+        <h3 className="font-bold text-green-800">📄 View Results</h3>
+      </div>
+
+      {/* 📚 Study Card — navigate to chatbot */}
+      <div
+        className="bg-purple-100 hover:bg-purple-200 p-6 rounded shadow cursor-pointer text-center w-40"
+        onClick={() => {
+          // Navigate to chatbot with subject in query params
+          navigate(`/chatbot?subject=${encodeURIComponent(selectedSubject)}`);
+        }}
+      >
+        <h3 className="font-bold text-purple-800">📚 Study</h3>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* Exam List */}
       {viewing === 'exams' && !selectedExam && (

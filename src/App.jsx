@@ -27,7 +27,7 @@ function App() {
   const [studentInfo, setStudentInfo] = useState(null);
   const [results, setResults] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showChat, setShowChat] = useState(false);
+  // const [showChat, setShowChat] = useState(false);
 
   const addResult = (result) => {
     setResults([...results, result]);
@@ -58,12 +58,12 @@ function App() {
           <Link to="/student-dashboard" className="hover:text-gray-300 transition">Student</Link>
           <Link to="/parent-link" className="hover:text-gray-300 transition">Parent</Link>
           <Link to="/admin" className="hover:text-gray-300 transition">Teacher</Link>
-          <button
+          {/* <button
             onClick={() => setShowChat(true)}
             className="hover:text-yellow-200 transition"
           >
             Study
-          </button>
+          </button> */}
         </nav>
       </header>
 
@@ -74,7 +74,7 @@ function App() {
           <Link to="/student-dashboard" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Student</Link>
           <Link to="/parent-link" className="hover:text-gray-300 transition">Parent</Link>
           <Link to="/admin" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Teacher</Link>
-          <button
+          {/* <button
             onClick={() => {
               setShowChat(true);
               setMenuOpen(false);
@@ -82,12 +82,12 @@ function App() {
             className="block text-left w-full hover:text-blue-500"
           >
             Study
-          </button>
+          </button> */}
         </div>
       )}
 
       {/* Chatbot Popup */}
-      {showChat && <Chatbot forceOpen={true} onClose={() => setShowChat(false)} />}
+      {/* {showChat && <Chatbot forceOpen={true} onClose={() => setShowChat(false)} />} */}
 
       {/* Main Content Section */}
       <div className="pt-28">
@@ -140,6 +140,7 @@ function App() {
           <Route path="/teacher-signup" element={<TeacherSignupPage />} />
           <Route path="/parent-dashboard" element={<ParentDashboard parentId="parent123" />} />
           <Route path="/parent-link" element={<ParentLinkForm />} />
+          <Route path="/chatbot" element={<Chatbot />} />
 
         </Routes>
       </div>

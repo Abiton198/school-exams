@@ -125,7 +125,7 @@ export default function PasswordPage({ setStudentInfo }) {
           onClick={handleLogin}
           className="w-full bg-violet-500 hover:bg-blue-600 text-white p-3 rounded font-semibold"
         >
-          Enter Exam
+          Student Dashboard
         </button>
       </div>
     </div>

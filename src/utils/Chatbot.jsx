@@ -11,6 +11,10 @@ export default function Chatbot({ forceOpen = false, onClose }) {
   const [showChat, setShowChat] = useState(forceOpen);
   const [showPopup, setShowPopup] = useState(!forceOpen);
 
+  const queryParams = new URLSearchParams(window.location.search);
+const subject = queryParams.get("subject");
+
+
   useEffect(() => {
     if (isExamPage) {
       setShowChat(false);
@@ -38,14 +42,14 @@ export default function Chatbot({ forceOpen = false, onClose }) {
         clientId: '2ddf09b2-2eac-4542-add4-9fdd64391d83',
         selector: '#webchat',
         conversationId: undefined, // let it create a fresh one
-        botConversationDescription: 'Welcome to Amic Hub CAT Study Assistant!',
+        botConversationDescription: 'Welcome to Amic Hub Study Assistant!',
         configuration: {
           color: '#5eb1ef',
           variant: 'soft',
           themeMode: 'light',
           fontFamily: 'inter',
           radius: 1,
-          botName: 'Eduplanet CAT Assistant',
+          botName: 'Amic Hub Assistant',
           avatarUrl: 'https://botpress.com/favicon.ico',
           enableReset: true,
           enableTranscriptDownload: true,
