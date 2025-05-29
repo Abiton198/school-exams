@@ -10,14 +10,14 @@ import {
   getDocs
 } from 'firebase/firestore';
 
-// ✅ Renamed to avoid conflict with Firestore's `query()` function
+// ✅ Extract query parameters like ?parentId=abc
 function useQueryParams() {
   return new URLSearchParams(useLocation().search);
 }
 
 export default function ParentDashboard() {
   const queryParams = useQueryParams();
-  const parentId = queryParams.get('parentId'); // Get parentId from URL query
+  const parentId = queryParams.get('parentId');
 
   const [childInfo, setChildInfo] = useState(null);
   const [results, setResults] = useState([]);
@@ -32,7 +32,7 @@ export default function ParentDashboard() {
           return;
         }
 
-        // Get parent data from Firestore
+        // 🔍 Get parent document
         const parentRef = doc(db, 'parents', parentId);
         const parentSnap = await getDoc(parentRef);
 
@@ -43,20 +43,18 @@ export default function ParentDashboard() {
 
         const childId = parentSnap.data().childId;
 
-        // Get child data from Firestore
+        // 👶 Get student info
         const childRef = doc(db, 'students', childId);
         const childSnap = await getDoc(childRef);
-
         if (childSnap.exists()) {
           setChildInfo(childSnap.data());
         }
 
-        // Fetch all exam results for the child
+        // 📥 Get exam results for the student
         const resultsQuery = query(
           collection(db, 'examResults'),
           where('studentId', '==', childId)
         );
-
         const resultsSnap = await getDocs(resultsQuery);
         const fetchedResults = resultsSnap.docs.map(doc => doc.data());
 
@@ -79,7 +77,7 @@ export default function ParentDashboard() {
     <div className="p-6 max-w-3xl mx-auto">
       <h2 className="text-2xl font-bold mb-4">Parent Dashboard</h2>
 
-      {/* Student Information Card */}
+      {/* 👤 Student Info Card */}
       {childInfo && (
         <div className="mb-6 p-4 bg-gray-100 rounded shadow">
           <h3 className="text-lg font-semibold">Student Info</h3>
@@ -88,7 +86,7 @@ export default function ParentDashboard() {
         </div>
       )}
 
-      {/* Exam Results */}
+      {/* 📝 Exam Results + Feedback */}
       <div>
         <h3 className="text-lg font-semibold mb-2">Subject Performance</h3>
         {results.length === 0 ? (
@@ -101,10 +99,18 @@ export default function ParentDashboard() {
                 <p><strong>Exam:</strong> {res.exam}</p>
                 <p><strong>Score:</strong> {res.percentage}%</p>
                 <p><strong>Date:</strong> {res.completedDate}</p>
+                {res.feedback && (
+                  <p className="mt-2 text-sm text-yellow-800 bg-yellow-50 p-2 rounded">
+                    💬 <strong>Teacher Feedback:</strong> {res.feedback}
+                  </p>
+                )}
               </li>
             ))}
           </ul>
         )}
+
+
+
       </div>
     </div>
   );

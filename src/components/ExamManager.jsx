@@ -11,6 +11,8 @@ export default function ExamManager() {
   const teacherName = localStorage.getItem('teacherName') || '';
   const navigate = useNavigate();
 
+
+
   // Authenticate and fetch only this teacher's exams
   useEffect(() => {
     const authenticateAndFetch = async () => {
@@ -127,6 +129,9 @@ export default function ExamManager() {
               <p className="text-sm mb-1"><strong>Time Limit:</strong> {exam.timeLimit || 'Not set'} minutes</p>
 
               <div className="flex gap-3 mt-3">
+
+
+
                 <button
                   onClick={() => handleEdit(exam)}
                   className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
@@ -147,8 +152,11 @@ export default function ExamManager() {
                 </button>
               </div>
             </div>
+            
           ))}
         </div>
+
+        
       )}
     </div>
   );

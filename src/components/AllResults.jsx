@@ -4,7 +4,7 @@ import { db } from '../utils/firebase';
 import Swal from 'sweetalert2';
 import StatisticsPanel from './StatisticsPanel';
 
-// 🧠 Helper: Calculate final score from written + mcq answers
+// 🔧 Helper: Calculate updated scores and percentage
 function calculateUpdatedResult(result) {
   const updatedAnswers = result.answers.map((a) => {
     const answer = {
@@ -17,11 +17,19 @@ function calculateUpdatedResult(result) {
     return answer;
   });
 
-  const writtenTotal = updatedAnswers.filter(a => a.type === 'written').reduce((sum, a) => sum + (a.teacherMark || 0), 0);
-  const maxWritten = updatedAnswers.filter(a => a.type === 'written').reduce((sum, a) => sum + (a.maxMark || 5), 0);
-  const mcqScore = updatedAnswers.filter(a => a.type === 'mcq').reduce((sum, a) => {
-    return a.teacherOverrideCorrect === true || a.answer === a.correctAnswer ? sum + 1 : sum;
-  }, 0);
+  const writtenTotal = updatedAnswers
+    .filter(a => a.type === 'written')
+    .reduce((sum, a) => sum + (a.teacherMark || 0), 0);
+
+  const maxWritten = updatedAnswers
+    .filter(a => a.type === 'written')
+    .reduce((sum, a) => sum + (a.maxMark || 5), 0);
+
+  const mcqScore = updatedAnswers
+    .filter(a => a.type === 'mcq')
+    .reduce((sum, a) =>
+      a.teacherOverrideCorrect === true || a.answer === a.correctAnswer ? sum + 1 : sum,
+    0);
 
   const totalPossible = maxWritten + updatedAnswers.filter(a => a.type === 'mcq').length;
   const totalScore = writtenTotal + mcqScore;
@@ -31,7 +39,7 @@ function calculateUpdatedResult(result) {
     answers: updatedAnswers,
     score: totalScore,
     percentage: finalPercentage,
-    marked: true // ✅ lock marking
+    marked: true
   };
 }
 
@@ -41,7 +49,9 @@ export default function AllResults() {
   const [accessGranted, setAccessGranted] = useState(false);
   const [selectedResult, setSelectedResult] = useState(null);
   const [markingData, setMarkingData] = useState(null);
+  const [feedback, setFeedback] = useState('');
 
+  // 🔐 Admin password protection
   useEffect(() => {
     const checkAdmin = async () => {
       const { value: password, isConfirmed } = await Swal.fire({
@@ -54,6 +64,7 @@ export default function AllResults() {
 
       if (isConfirmed && password === 'admin123') {
         setAccessGranted(true);
+        // 🔄 Listen to real-time updates in examResults
         onSnapshot(collection(db, 'examResults'), (snapshot) => {
           const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setResults(fetched);
@@ -99,16 +110,12 @@ export default function AllResults() {
                 <button onClick={() => setSelectedResult(r)} className="text-blue-600 underline">View</button>
                 <button
                   onClick={() => {
-                    if (r.marked) {
-                      Swal.fire('Locked', 'This exam has already been marked.', 'info');
-                      return;
-                    }
                     setMarkingData(r);
+                    setFeedback(r.feedback || '');
                   }}
-                  className={`underline ${r.marked ? 'text-gray-400 cursor-not-allowed' : 'text-purple-600'}`}
-                  disabled={r.marked}
+                  className="text-purple-600 underline"
                 >
-                  Mark
+                  {r.marked ? 'Edit Feedback' : 'Mark'}
                 </button>
               </td>
             </tr>
@@ -116,7 +123,7 @@ export default function AllResults() {
         </tbody>
       </table>
 
-      {/* ✅ View Modal */}
+      {/* 🧾 View Modal */}
       {selectedResult && (
         <div className="fixed top-0 left-0 w-full h-full bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white w-full max-w-3xl rounded-lg shadow-lg p-6 overflow-y-auto max-h-[90vh] relative">
@@ -133,78 +140,60 @@ export default function AllResults() {
                 </li>
               ))}
             </ul>
+            {selectedResult.feedback && (
+              <div className="mt-4 bg-yellow-100 border-l-4 border-yellow-600 p-3">
+                <p><strong>Teacher Feedback:</strong> {selectedResult.feedback}</p>
+              </div>
+            )}
             <button onClick={() => setSelectedResult(null)} className="absolute top-2 right-4 text-2xl font-bold text-gray-500 hover:text-red-600">×</button>
           </div>
         </div>
       )}
 
-      {/* ✅ Marking Modal */}
+      {/* ✍️ Marking / Feedback Modal */}
       {markingData && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">Marking: {markingData.name} - {markingData.exam}</h2>
+            <h2 className="text-xl font-bold mb-4">
+              {markingData.marked ? 'Edit Feedback' : 'Marking'}: {markingData.name} - {markingData.exam}
+            </h2>
 
-            {markingData.answers.map((a, idx) => (
-              <div key={idx} className="border p-4 mb-3 rounded">
-                <p><strong>Q{idx + 1}:</strong> {a.question}</p>
-                <p><strong>Answer:</strong> {a.answer}</p>
-                {a.type === 'written' ? (
-                  <>
-                    <label className="block mt-2">Mark out of {a.maxMark || 5}:</label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={a.maxMark || 5}
-                      value={a.teacherMark ?? ''}
-                      onChange={(e) => {
-                        const updated = { ...markingData };
-                        updated.answers[idx].teacherMark = parseInt(e.target.value || 0);
-                        setMarkingData(updated);
-                      }}
-                      className="w-full p-2 border rounded mt-1"
-                    />
-                  </>
-                ) : (
-                  <>
-                    <p><strong>Correct Answer:</strong> {a.correctAnswer}</p>
-                    <label className="block mt-2">Mark as correct?</label>
-                    <select
-                      value={a.teacherOverrideCorrect ?? ''}
-                      onChange={(e) => {
-                        const updated = { ...markingData };
-                        updated.answers[idx].teacherOverrideCorrect = e.target.value === 'true';
-                        setMarkingData(updated);
-                      }}
-                      className="w-full p-2 border rounded"
-                    >
-                      <option value="">-- Select --</option>
-                      <option value="true">Yes</option>
-                      <option value="false">No</option>
-                    </select>
-                  </>
-                )}
-              </div>
-            ))}
+            {/* Editable feedback */}
+            <div className="mb-4">
+              <label className="block font-semibold mb-1">Teacher Feedback:</label>
+              <textarea
+                rows={4}
+                className="w-full border p-2 rounded"
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="Enter comments for the student..."
+              />
+            </div>
 
-            <div className="flex justify-end space-x-4 mt-6">
-              <button onClick={() => setMarkingData(null)} className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">
+            <div className="flex justify-end gap-4">
+              <button onClick={() => setMarkingData(null)} className="bg-gray-300 px-4 py-2 rounded">
                 Cancel
               </button>
               <button
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
                 onClick={async () => {
                   try {
-                    const updated = calculateUpdatedResult(markingData);
-                    await updateDoc(doc(db, 'examResults', markingData.id), updated);
-                    Swal.fire('✅ Saved!', 'Marks updated successfully.', 'success');
+                    const updateData = markingData.marked
+                      ? { feedback: feedback.trim() }
+                      : {
+                          ...calculateUpdatedResult(markingData),
+                          feedback: feedback.trim()
+                        };
+                    await updateDoc(doc(db, 'examResults', markingData.id), updateData);
+                    Swal.fire('✅ Saved', 'Feedback/Marks saved successfully.', 'success');
                     setMarkingData(null);
                   } catch (err) {
                     console.error(err);
-                    Swal.fire('Error', 'Could not save marks.', 'error');
+                    Swal.fire('Error', 'Could not update data.', 'error');
                   }
                 }}
+                className="bg-green-600 text-white px-4 py-2 rounded"
               >
-                Save Marks
+                {markingData.marked ? 'Update Feedback' : 'Save Marks & Feedback'}
               </button>
             </div>
           </div>
