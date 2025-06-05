@@ -155,6 +155,9 @@ export default function TeacherDashboard() {
       Swal.fire('Error', 'Could not delete exam.', 'error');
     }
   };
+  console.log("📌 teacherSubject:", teacherInfo.subject);
+console.log("📌 teacherName:", teacherInfo.name);
+
 
   // --- 7) RENDER DASHBOARD ---
   return (
@@ -195,17 +198,23 @@ export default function TeacherDashboard() {
           <table className="w-full text-left border">
             <thead>
               <tr className="bg-gray-100">
+                <th className="p-2 border">Date</th>
                 <th className="p-2 border">Student</th>
+                <th className="p-2 border">Grade</th>
                 <th className="p-2 border">Exam</th>
                 <th className="p-2 border">Score</th>
+                <th className="p-2 border">%</th>
               </tr>
             </thead>
             <tbody>
               {results.map((r, i) => (
                 <tr key={i}>
-                  <td className="p-2 border">{r.studentName}</td>
-                  <td className="p-2 border">{r.examTitle}</td>
+                  <td className="p-2 border">{r.completedDate}</td>
+                  <td className="p-2 border">{r.name}</td>
+                  <td className="p-2 border">{r.grade}</td>
+                  <td className="p-2 border">{r.exam}</td>
                   <td className="p-2 border">{r.score}</td>
+                  <td className="p-2 border">{r.percentage}</td>
                 </tr>
               ))}
             </tbody>
@@ -268,3 +277,7 @@ export default function TeacherDashboard() {
     </div>
   );
 }
+
+
+// ! teacher dashboard not showing deatils when logged in
+// !check other subjects if they are appearing on dashboard after use...

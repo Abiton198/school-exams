@@ -58,12 +58,7 @@ function App() {
           <Link to="/student-dashboard" className="hover:text-gray-300 transition">Student</Link>
           <Link to="/parent-link" className="hover:text-gray-300 transition">Parent</Link>
           <Link to="/admin" className="hover:text-gray-300 transition">Teacher</Link>
-          {/* <button
-            onClick={() => setShowChat(true)}
-            className="hover:text-yellow-200 transition"
-          >
-            Study
-          </button> */}
+         
         </nav>
       </header>
 
@@ -74,20 +69,8 @@ function App() {
           <Link to="/student-dashboard" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Student</Link>
           <Link to="/parent-link" className="hover:text-gray-300 transition">Parent</Link>
           <Link to="/admin" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Teacher</Link>
-          {/* <button
-            onClick={() => {
-              setShowChat(true);
-              setMenuOpen(false);
-            }}
-            className="block text-left w-full hover:text-blue-500"
-          >
-            Study
-          </button> */}
-        </div>
+         </div>
       )}
-
-      {/* Chatbot Popup */}
-      {/* {showChat && <Chatbot forceOpen={true} onClose={() => setShowChat(false)} />} */}
 
       {/* Main Content Section */}
       <div className="pt-28">

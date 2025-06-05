@@ -7,8 +7,9 @@ import { useNavigate } from 'react-router-dom';
 export default function ExamManager() {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
-  const teacherSubject = localStorage.getItem('teacherSubject') || '';
-  const teacherName = localStorage.getItem('teacherName') || '';
+  const teacherInfo = JSON.parse(localStorage.getItem('teacherInfo') || '{}');
+  const teacherSubject = teacherInfo.subject || '';
+  const teacherName = teacherInfo.name || '';  
   const navigate = useNavigate();
 
 
