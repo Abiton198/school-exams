@@ -1,35 +1,29 @@
 // src/components/TeacherDashboard.jsx
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, addDoc, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../utils/firebase';
+import { collection, addDoc, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import Swal from 'sweetalert2';
+import TeacherChatPopup from '../utils/TeacherChatPopup'; // ✅ Import
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
-
-  // --- 1) BASIC STATE ---
   const [loading, setLoading] = useState(true);
   const [teacherInfo, setTeacherInfo] = useState(null);
   const [exams, setExams] = useState([]);
   const [results, setResults] = useState([]);
-
-  // Form fields for creating an exam
   const [title, setTitle] = useState('');
   const [grade, setGrade] = useState('');
   const [password, setPassword] = useState('');
   const [questions, setQuestions] = useState([]);
-
-  // Session timer
   const [timeLeft, setTimeLeft] = useState(60);
   const expirationRef = useRef(null);
   const timeoutRef = useRef(null);
 
-  // --- 2) AUTH GUARD + INITIALIZATION ---
+  // 🔐 Auth guard
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(user => {
       if (!user) return navigate('/teacher-login');
-
       const info = JSON.parse(localStorage.getItem('teacherInfo'));
       if (!info) {
         auth.signOut().finally(() => navigate('/teacher-login'));
@@ -59,7 +53,7 @@ export default function TeacherDashboard() {
     };
   }, [navigate]);
 
-  // --- 3) COUNTDOWN TIMER ---
+  // ⏱️ Session timer
   useEffect(() => {
     if (loading) return;
     const tick = () => {
@@ -72,7 +66,7 @@ export default function TeacherDashboard() {
     return () => clearInterval(iv);
   }, [loading]);
 
-  // --- 4) LOAD RESULTS FOR TEACHER'S SUBJECT ---
+  // 📊 Load Results
   useEffect(() => {
     const loadResults = async () => {
       try {
@@ -87,12 +81,7 @@ export default function TeacherDashboard() {
     if (teacherInfo) loadResults();
   }, [teacherInfo]);
 
-  // --- 5) PREVENT RENDER UNTIL DATA IS READY ---
-  if (loading) {
-    return <div className="text-center mt-20 text-gray-500">Loading dashboard...</div>;
-  }
-
-  // --- 6) EXAM CREATION HELPERS ---
+  // 📝 Exam Helpers
   const addQuestion = () => {
     setQuestions(qs => [
       ...qs,
@@ -126,9 +115,6 @@ export default function TeacherDashboard() {
       });
       Swal.fire('Success', 'Exam saved!', 'success');
       setTitle(''); setGrade(''); setPassword(''); setQuestions([]);
-      const q = query(collection(db, 'exams'), where('subject', '==', teacherInfo.subject));
-      const snap = await getDocs(q);
-      setExams(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (err) {
       console.error(err);
       Swal.fire('Error', 'Could not save exam.', 'error');
@@ -143,9 +129,7 @@ export default function TeacherDashboard() {
       showCancelButton: true,
       confirmButtonText: 'Yes, delete it'
     });
-
     if (!confirmed.isConfirmed) return;
-
     try {
       await deleteDoc(doc(db, 'exams', id));
       setExams(exams.filter(e => e.id !== id));
@@ -155,13 +139,17 @@ export default function TeacherDashboard() {
       Swal.fire('Error', 'Could not delete exam.', 'error');
     }
   };
-  console.log("📌 teacherSubject:", teacherInfo.subject);
-console.log("📌 teacherName:", teacherInfo.name);
+
+  // 🛡️ Safe guard rendering
+if (loading || !teacherInfo) {
+  return <div className="text-center mt-20 text-gray-500">Loading dashboard...</div>;
+}
 
 
-  // --- 7) RENDER DASHBOARD ---
+  // ✅ UI
   return (
     <div className="max-w-5xl mx-auto pt-28 p-4">
+      
       <h2 className="text-2xl font-bold mb-6 text-center">
         Welcome {teacherInfo.name} — {teacherInfo.subject}
       </h2>
@@ -169,6 +157,13 @@ console.log("📌 teacherName:", teacherInfo.name);
       <div className="text-sm text-right text-gray-600 mb-4">
         ⏳ Session expires in: <strong>{timeLeft}</strong> min
       </div>
+
+
+{/* ✅ Chat interface */}
+      {/* {teacherInfo && <TeacherChatPopup teacherName={teacherInfo.name} />} */}
+      {teacherInfo && <TeacherChatPopup teacherName={teacherInfo.name} teacherId={teacherInfo.id || teacherInfo.uid} />}
+
+
 
       {/* EXAMS LIST */}
       <div className="bg-white p-4 shadow rounded mb-6">
@@ -260,6 +255,7 @@ console.log("📌 teacherName:", teacherInfo.name);
         </div>
       </div>
 
+
       {/* LOGOUT BUTTON */}
       <div className="text-center">
         <button
@@ -277,7 +273,3 @@ console.log("📌 teacherName:", teacherInfo.name);
     </div>
   );
 }
-
-
-// ! teacher dashboard not showing deatils when logged in
-// !check other subjects if they are appearing on dashboard after use...
