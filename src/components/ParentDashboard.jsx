@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { db } from '../utils/firebase';
-import { useLocation } from 'react-router-dom';
+import { db, auth } from '../utils/firebase';
 import {
   doc,
   getDoc,
@@ -9,99 +8,120 @@ import {
   where,
   getDocs
 } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
+import { signOut } from 'firebase/auth';
 import ParentChatBox from '../utils/ParentChatBox';
 
-function useQueryParams() {
-  return new URLSearchParams(useLocation().search);
-}
-
 export default function ParentDashboard() {
-  const queryParams = useQueryParams();
-  const parentId = queryParams.get('parentId');
-
+  const navigate = useNavigate();
+  const [parentId, setParentId] = useState(localStorage.getItem('parentId') || '');
   const [childInfo, setChildInfo] = useState(null);
   const [results, setResults] = useState([]);
+  const [teacherId, setTeacherId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
-  const [teacherId, setTeacherId] = useState(null);
 
-  // 🚀 Load parent, child, teacher, and results
+  // 🔐 Resolve parentId from auth
   useEffect(() => {
-    const fetchData = async () => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (!user || !user.email) {
+        navigate('/parent-login');
+        return;
+      }
+
       try {
-        if (!parentId) {
-          setErrorMsg('No parent ID provided.');
+        const q = query(collection(db, 'parents'), where('email', '==', user.email));
+        const snap = await getDocs(q);
+        if (snap.empty) {
+          setErrorMsg('Parent not found in Firestore.');
+          setLoading(false);
           return;
         }
 
-        // 🔍 Get parent record
+        const parentDoc = snap.docs[0];
+        const fetchedParentId = parentDoc.id;
+        setParentId(fetchedParentId);
+        localStorage.setItem('parentId', fetchedParentId);
+      } catch (err) {
+        console.error('Error fetching parent:', err);
+        setErrorMsg('Something went wrong.');
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
+
+  // 📦 Load child and results
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      if (!parentId) return;
+
+      try {
         const parentRef = doc(db, 'parents', parentId);
         const parentSnap = await getDoc(parentRef);
         if (!parentSnap.exists()) {
           setErrorMsg('Parent record not found.');
+          setLoading(false);
           return;
         }
-            
-        const parentData = parentSnap.data();
-        const childId = parentData.childId;
-        const fetchedTeacherId = parentData.teacherId;
 
-        // ❗ Validate necessary fields
-        if (!childId || !fetchedTeacherId) {
-          console.warn('⛔ Missing childId or teacherId in parent document:', parentData);
+        const { childId, teacherId } = parentSnap.data();
+
+        if (!childId || !teacherId) {
           setErrorMsg('Missing child or teacher ID in parent record.');
+          setLoading(false);
           return;
-        }     
-        setTeacherId(fetchedTeacherId);
+        }
 
-        // 👶 Get child info
-        // const childRef = doc(db, 'students', childId);
-        // const childSnap = await getDoc(childRef);
-        // if (childSnap.exists()) {
-        //   setChildInfo({ id: childId, ...childSnap.data() });
-        // }
+        setTeacherId(teacherId);
 
-
-        console.log('👀 Checking childId:', childId);
         const childRef = doc(db, 'students', childId);
         const childSnap = await getDoc(childRef);
         if (!childSnap.exists()) {
-          console.error('🚨 No student found with this childId:', childId);
-        } else {
-          console.log('✅ Student document found:', childSnap.data());
-          setChildInfo({ id: childId, ...childSnap.data() });
+          setErrorMsg('Student record not found.');
+          setLoading(false);
+          return;
         }
 
-        // 📝 Get student exam results
+        setChildInfo({ id: childId, ...childSnap.data() });
+
         const resultsQuery = query(
           collection(db, 'examResults'),
           where('studentId', '==', childId)
         );
         const resultsSnap = await getDocs(resultsQuery);
-        const fetchedResults = resultsSnap.docs.map(doc => doc.data());
-
-        setResults(fetchedResults);
+        setResults(resultsSnap.docs.map(doc => doc.data()));
       } catch (err) {
         console.error('Error loading dashboard:', err);
-        setErrorMsg('Something went wrong while loading the dashboard.');
+        setErrorMsg('Failed to load dashboard.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    if (parentId) {
+      loadDashboardData();
+    }
   }, [parentId]);
 
-  if (loading) return <p className="p-4">Loading...</p>;
-  if (errorMsg) return <p className="p-4 text-red-500">{errorMsg}</p>;
+  // 🔓 Handle logout
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      localStorage.removeItem('parentId');
+      navigate('/');
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+  };
 
-  console.log('👨‍👩‍👧 parentId:', parentId);
-  console.log('👶 childInfo:', childInfo);
-  console.log('👩‍🏫 teacherId:', teacherId);
+  // ⏳ UI States
+  if (loading) return <p className="p-4">Loading dashboard...</p>;
+  if (errorMsg) return <p className="p-4 text-red-500">{errorMsg}</p>;
 
   return (
     <>
-      {/* 💬 Floating Parent Chatbox */}
       {parentId && childInfo?.id && teacherId && (
         <ParentChatBox
           parentId={parentId}
@@ -110,11 +130,17 @@ export default function ParentDashboard() {
         />
       )}
 
-      {/* 🧾 Dashboard Content */}
       <div className="p-6 max-w-3xl mx-auto">
-        <h2 className="text-2xl font-bold mb-4">Parent Dashboard</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold">Parent Dashboard</h2>
+          <button
+            onClick={handleLogout}
+            className="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700"
+          >
+            Logout
+          </button>
+        </div>
 
-        {/* 👶 Student Info */}
         {childInfo && (
           <div className="mb-6 p-4 bg-gray-100 rounded shadow">
             <h3 className="text-lg font-semibold">Student Info</h3>
@@ -123,11 +149,10 @@ export default function ParentDashboard() {
           </div>
         )}
 
-        {/* 📊 Exam Results */}
         <div>
           <h3 className="text-lg font-semibold mb-2">Subject Performance</h3>
           {results.length === 0 ? (
-            <p>No results found for this student.</p>
+            <p>No results found.</p>
           ) : (
             <ul className="space-y-3">
               {results.map((res, index) => (

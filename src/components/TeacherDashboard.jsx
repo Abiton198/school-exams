@@ -154,6 +154,22 @@ if (loading || !teacherInfo) {
         Welcome {teacherInfo.name} — {teacherInfo.subject}
       </h2>
 
+      <div className="flex justify-center space-x-4 mb-6">
+  <button
+    onClick={() => navigate('/all-results')}
+    className="bg-purple-600 text-white px-4 py-2 rounded text-sm hover:bg-purple-700"
+  >
+    📊 All Results
+  </button>
+  <button
+    onClick={() => navigate('/exam-manager')}
+    className="bg-indigo-600 text-white px-4 py-2 rounded text-sm hover:bg-indigo-700"
+  >
+    🛠 Exam Manager
+  </button>
+</div>
+
+
       <div className="text-sm text-right text-gray-600 mb-4">
         ⏳ Session expires in: <strong>{timeLeft}</strong> min
       </div>

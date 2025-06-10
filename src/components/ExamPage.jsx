@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { auth, db, signInAnonymously } from '../utils/firebase';
+import { signOut } from 'firebase/auth';
+
+
 
 function formatTime(seconds) {
   const mins = Math.floor(seconds / 60);
@@ -164,11 +167,39 @@ export default function ExamPage({ studentInfo, addResult }) {
     }
   }, [authenticated]);
 
+  // logout
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      localStorage.removeItem('studentName');
+      localStorage.removeItem('studentGrade');
+      localStorage.removeItem('studentId');
+      // Optionally clear exam-related localStorage:
+      Object.keys(localStorage).forEach((key) => {
+        if (key.includes('_attempts') || key.includes('_lastAttempt')) {
+          localStorage.removeItem(key);
+        }
+      });
+      navigate('/');
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+  };
+  
+
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-      <h1 className="text-2xl font-bold text-center mb-6">
-        Welcome, {studentInfo.name} ({studentInfo.grade})
-      </h1>
+      <div className="flex justify-between items-center mb-4">
+              <h1 className="text-2xl font-bold text-center w-full">
+                Welcome, {studentInfo.name} ({studentInfo.grade})
+              </h1>
+              <button
+                onClick={handleLogout}
+                className="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700 ml-auto"
+              >
+                🔒 Logout
+              </button>
+            </div>
 
       {/* Subject Cards */}
       {!selectedExam && !viewing && (

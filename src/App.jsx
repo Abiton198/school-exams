@@ -18,64 +18,53 @@ import StudentExamDashboard from './components/StudentExamDashboard';
 import TeacherSignupPage from './utils/TeacherSignupPage';
 import ParentDashboard from './components/ParentDashboard';
 import ParentLinkForm from './components/ParentLinkForm';
-
-
-
-
+import LandingPage from './components/LandingPage'; // ✅ New Landing Page
+// import StudentWelcomePage from './utils/StudentWelcomePage';
+import ParentLogin from './utils/ParentLogin';
 
 function App() {
   const [studentInfo, setStudentInfo] = useState(null);
   const [results, setResults] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
-  // const [showChat, setShowChat] = useState(false);
 
   const addResult = (result) => {
     setResults([...results, result]);
   };
 
+  // const [studentInfo] = useState({ name: "John Doe" });
+
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Header Section */}
-      <header className="fixed top-0 left-0 w-full flex justify-between items-center p-4 bg-violet-400 text-white shadow-md z-50">
+      {/* ✅ Navbar */}
+      <header className="fixed top-0 left-0 w-full flex justify-between items-center p-10 bg-gray-800 text-white shadow-md z-50">
         <Link to="/" className="flex items-center space-x-2">
-          <img src={amic_hub} alt="Eduplanet Logo" className="h-14 w-auto rounded-full shadow-md" />
-          <span className="text-xl font-bold">Study & Exam Online</span>
-        </Link>
+          <img src={amic_hub} alt="Logo" className="h-10 w-10 rounded-full" />
+          <span className="text-lg font-bold">Amic Learning Hub</span>
 
-        {/* Hamburger Menu (mobile only) */}
+        </Link>
+          
         <div className="md:hidden">
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="text-white focus:outline-none text-3xl"
-          >
+          <button onClick={() => setMenuOpen(!menuOpen)} className="text-white text-2xl">
             ☰
           </button>
         </div>
-
-        {/* Desktop Menu */}
-        <nav className="hidden md:flex space-x-6">
-          <Link to="/exam-rules" className="hover:text-gray-300 transition">Exam Rules</Link>
-          <Link to="/student-dashboard" className="hover:text-gray-300 transition">Student</Link>
-          <Link to="/parent-link" className="hover:text-gray-300 transition">Parent</Link>
-          <Link to="/admin" className="hover:text-gray-300 transition">Teacher</Link>
-         
-        </nav>
       </header>
 
-      {/* Mobile Menu (when open) */}
+      {/* ✅ Mobile Menu */}
       {menuOpen && (
-        <div className="md:hidden absolute top-20 left-0 w-full bg-white/90 text-blue-900 px-4 py-4 space-y-3 shadow-xl z-50 backdrop-blur-md">
-          <Link to="/exam-rules" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Exam Rules</Link>
+        <div className="md:hidden absolute top-20 left-0 w-full bg-white/90 text-gray-800 px-4 py-4 space-y-3 shadow-xl z-50 backdrop-blur-md">
           <Link to="/student-dashboard" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Student</Link>
-          <Link to="/parent-link" className="hover:text-gray-300 transition">Parent</Link>
-          <Link to="/admin" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Teacher</Link>
-         </div>
+          <Link to="/teacher-dashboard" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Teacher</Link>
+          <Link to="/parent-dashboard" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Parent</Link>
+          <Link to="/admin" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Admin</Link>
+        </div>
       )}
 
-      {/* Main Content Section */}
-      <div className="pt-28">
+      {/* ✅ Main Content */}
+      <div className="pt-24">
         <Routes>
-          <Route path="/" element={<PasswordPage setStudentInfo={setStudentInfo} />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/password" element={<PasswordPage setStudentInfo={setStudentInfo} />} />
           <Route path="/review" element={<ReviewPage />} />
           <Route
             path="/exam"
@@ -85,7 +74,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/results"
             element={
@@ -94,20 +82,9 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/teacher-dashboard"
-            element={
-                <TeacherDashboard />
-              
-            }
-          />
-          <Route
-            path="/exam-manager"
-            element={
-                <ExamManager />
-           
-            }
-          />
+          <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
+          <Route path="/exam-manager" element={<ExamManager />} />
+         
           <Route
             path="/student-dashboard"
             element={
@@ -116,6 +93,16 @@ function App() {
               </ProtectedRoute>
             }
           />
+{/* 
+            <Route
+              path="/student-welcome"
+              element={
+                <ProtectedRoute studentInfo={studentInfo}>
+                  <StudentWelcomePage studentInfo={studentInfo} />
+                </ProtectedRoute>
+              }
+            /> */}
+
           <Route path="/all-results" element={<AllResults />} />
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/exam-rules" element={<ExamRules />} />
@@ -124,7 +111,7 @@ function App() {
           <Route path="/parent-dashboard" element={<ParentDashboard parentId="parent123" />} />
           <Route path="/parent-link" element={<ParentLinkForm />} />
           <Route path="/chatbot" element={<Chatbot />} />
-
+          <Route path="/parent-login" element={<ParentLogin />} />
         </Routes>
       </div>
     </div>

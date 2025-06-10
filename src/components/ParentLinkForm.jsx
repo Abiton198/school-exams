@@ -1,44 +1,63 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from '../utils/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../utils/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { studentList } from '../data/studentData';
 
 export default function ParentLinkForm() {
-  // State for form inputs
   const [parentName, setParentName] = useState('');
+  const [parentEmail, setParentEmail] = useState('');
   const [parentPassword, setParentPassword] = useState('');
   const [grade, setGrade] = useState('');
   const [student, setStudent] = useState('');
   const [message, setMessage] = useState('');
+  const navigate = useNavigate();
 
-  const navigate = useNavigate(); // React Router navigation
-
-  // Handle form submission
   const handleSubmit = async () => {
-    // Ensure all fields are filled
-    if (!parentName || !parentPassword || !grade || !student) {
+    if (!parentName || !parentEmail || !parentPassword || !grade || !student) {
       setMessage('Please fill in all fields.');
       return;
     }
 
-    // Create unique studentId (same format used when students log in)
     const studentId = `Grade${grade}_${student.replace(/\s/g, '').toLowerCase()}`;
-    const parentId = parentName.replace(/\s/g, '').toLowerCase(); // Unique parent ID
 
     try {
-      // Save parent info in Firestore and link to childId
-      await setDoc(doc(db, 'parents', parentId), {
+      // 🔍 Step 1: Fetch student from Firestore to get teacherId
+      const studentRef = doc(db, 'students', studentId);
+      const studentSnap = await getDoc(studentRef);
+
+      if (!studentSnap.exists()) {
+        setMessage('Student not found in database.');
+        return;
+      }
+
+      const studentData = studentSnap.data();
+      const teacherId = studentData.teacherId;
+
+      if (!teacherId) {
+        setMessage('No teacher assigned to this student.');
+        return;
+      }
+
+      // 🔐 Step 2: Register parent in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, parentEmail, parentPassword);
+      const parent = userCredential.user;
+
+      // 💾 Step 3: Save parent info in Firestore with teacherId
+      await setDoc(doc(db, 'parents', parent.uid), {
         name: parentName,
-        password: parentPassword,
+        email: parentEmail,
         childId: studentId,
+        teacherId: teacherId,
       });
 
-      // Redirect parent to the dashboard with parentId in URL
-      navigate(`/parent-dashboard?parentId=${parentId}`);
+      // 👉 Redirect to dashboard
+      localStorage.setItem('parentId', parent.uid);
+      navigate('/parent-dashboard');
     } catch (error) {
-      console.error('Error linking parent:', error);
-      setMessage('Error occurred. Try again.');
+      console.error('❌ Error linking parent:', error);
+      setMessage(error.message || 'Error occurred. Try again.');
     }
   };
 
@@ -46,7 +65,6 @@ export default function ParentLinkForm() {
     <div className="p-6 max-w-md mx-auto bg-white rounded shadow">
       <h2 className="text-xl font-bold mb-4">Link Parent to Student</h2>
 
-      {/* Parent name input */}
       <input
         type="text"
         placeholder="Parent Name"
@@ -55,16 +73,22 @@ export default function ParentLinkForm() {
         className="w-full p-2 mb-3 border rounded"
       />
 
-      {/* Parent password input */}
+      <input
+        type="email"
+        placeholder="Parent Email"
+        value={parentEmail}
+        onChange={(e) => setParentEmail(e.target.value)}
+        className="w-full p-2 mb-3 border rounded"
+      />
+
       <input
         type="password"
-        placeholder="Parent Password"
+        placeholder="Create Password"
         value={parentPassword}
         onChange={(e) => setParentPassword(e.target.value)}
         className="w-full p-2 mb-3 border rounded"
       />
 
-      {/* Grade selection dropdown */}
       <select
         value={grade}
         onChange={(e) => {
@@ -79,7 +103,6 @@ export default function ParentLinkForm() {
         ))}
       </select>
 
-      {/* Student selection dropdown (appears after grade is selected) */}
       {grade && studentList[grade] && (
         <select
           value={student}
@@ -93,15 +116,13 @@ export default function ParentLinkForm() {
         </select>
       )}
 
-      {/* Submit button */}
       <button
         onClick={handleSubmit}
         className="w-full bg-blue-600 text-white p-2 rounded font-semibold"
       >
-        Link Parent
+        Link Parent & Register
       </button>
 
-      {/* Feedback message */}
       {message && <p className="mt-3 text-center text-sm text-red-600">{message}</p>}
     </div>
   );

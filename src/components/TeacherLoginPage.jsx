@@ -1,4 +1,3 @@
-// Simplified TeacherLoginPage with email/password login
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../utils/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -35,7 +34,6 @@ export default function TeacherLoginPage() {
       const docRef = doc(db, 'teachers', user.uid);
       const snap = await getDoc(docRef);
       if (!snap.exists()) {
-        // Create profile on first login
         await setDoc(docRef, {
           name: teacher.name,
           subject: teacher.subject
@@ -54,6 +52,10 @@ export default function TeacherLoginPage() {
       console.error("Login error:", err.message);
       setError("Invalid email or password.");
     }
+  };
+
+  const handleCancel = () => {
+    navigate('/');
   };
 
   return (
@@ -78,12 +80,19 @@ export default function TeacherLoginPage() {
 
         <button
           onClick={handleLogin}
-          className="w-full bg-blue-600 text-white py-2 rounded mb-2"
+          className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded mb-2"
         >
-          Login
+          ✅ Login
         </button>
 
-        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+        <button
+          onClick={handleCancel}
+          className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded"
+        >
+          ❌ Cancel
+        </button>
+
+        {error && <p className="text-red-500 text-sm text-center mt-2">{error}</p>}
       </div>
     </div>
   );
