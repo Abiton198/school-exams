@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Routes, Route, Link } from 'react-router-dom';
-import PasswordPage from './components/PasswordPage';
+import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import ExamPage from './components/ExamPage';
 import ResultPage from './components/ResultPage';
 import ExamRules from './utils/ExamRules';
@@ -18,9 +17,13 @@ import StudentExamDashboard from './components/StudentExamDashboard';
 import TeacherSignupPage from './utils/TeacherSignupPage';
 import ParentDashboard from './components/ParentDashboard';
 import ParentLinkForm from './components/ParentLinkForm';
-import LandingPage from './components/LandingPage'; // ✅ New Landing Page
-// import StudentWelcomePage from './utils/StudentWelcomePage';
+import LandingPage from './components/LandingPage';
 import ParentLogin from './utils/ParentLogin';
+import QRLogin from './utils/QRLogin'; // 
+import AdminQRLogin from './utils/AdminQRLogin';
+import CreateAdminRoute from './utils/CreateAdminRoute';
+import AdminQRGenerator from './utils/AdminQRGenerator';
+
 
 function App() {
   const [studentInfo, setStudentInfo] = useState(null);
@@ -31,8 +34,6 @@ function App() {
     setResults([...results, result]);
   };
 
-  // const [studentInfo] = useState({ name: "John Doe" });
-
   return (
     <div className="min-h-screen bg-gray-100">
       {/* ✅ Navbar */}
@@ -40,9 +41,8 @@ function App() {
         <Link to="/" className="flex items-center space-x-2">
           <img src={amic_hub} alt="Logo" className="h-10 w-10 rounded-full" />
           <span className="text-lg font-bold">Amic Learning Hub</span>
-
         </Link>
-          
+
         <div className="md:hidden">
           <button onClick={() => setMenuOpen(!menuOpen)} className="text-white text-2xl">
             ☰
@@ -57,6 +57,7 @@ function App() {
           <Link to="/teacher-dashboard" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Teacher</Link>
           <Link to="/parent-dashboard" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Parent</Link>
           <Link to="/admin" onClick={() => setMenuOpen(false)} className="block hover:text-blue-500">Admin</Link>
+          <Link to="/qr-login" onClick={() => setMenuOpen(false)} className="block hover:text-green-600 font-bold">QR Login</Link>
         </div>
       )}
 
@@ -64,7 +65,8 @@ function App() {
       <div className="pt-24">
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/password" element={<PasswordPage setStudentInfo={setStudentInfo} />} />
+          <Route path="/qr-login" element={<QRLogin setStudentInfo={setStudentInfo} />} />
+          
           <Route path="/review" element={<ReviewPage />} />
           <Route
             path="/exam"
@@ -84,7 +86,6 @@ function App() {
           />
           <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
           <Route path="/exam-manager" element={<ExamManager />} />
-         
           <Route
             path="/student-dashboard"
             element={
@@ -93,16 +94,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-{/* 
-            <Route
-              path="/student-welcome"
-              element={
-                <ProtectedRoute studentInfo={studentInfo}>
-                  <StudentWelcomePage studentInfo={studentInfo} />
-                </ProtectedRoute>
-              }
-            /> */}
-
           <Route path="/all-results" element={<AllResults />} />
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/exam-rules" element={<ExamRules />} />
@@ -112,6 +103,9 @@ function App() {
           <Route path="/parent-link" element={<ParentLinkForm />} />
           <Route path="/chatbot" element={<Chatbot />} />
           <Route path="/parent-login" element={<ParentLogin />} />
+          <Route path="/admin-qr-login" element={<AdminQRLogin />} />
+          <Route path="/create-initial-admin" element={<CreateAdminRoute />} />
+
         </Routes>
       </div>
     </div>
