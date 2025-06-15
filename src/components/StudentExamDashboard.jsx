@@ -1,20 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs } from 'firebase/firestore';
-import { db, auth } from '../utils/firebase'; // ✅ Correct Firebase imports!
 import Swal from 'sweetalert2';
-import { signOut } from 'firebase/auth'; // ✅ Ensure signOut is imported
+import { collection, getDocs } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
+import { auth, db } from '../utils/firebase';
 
 export default function StudentExamDashboard({ studentInfo }) {
+  const navigate = useNavigate();
   const [groupedExams, setGroupedExams] = useState({});
   const [expandedSubject, setExpandedSubject] = useState(null);
   const [studentResults, setStudentResults] = useState([]);
-  const navigate = useNavigate();
 
-  // ✅ Fetch exams + results once studentInfo is ready
   useEffect(() => {
-    if (!studentInfo) {
-      navigate('/'); // fallback: redirect home if no info
+    if (!studentInfo || !studentInfo.name) {
+      navigate('/');
       return;
     }
 
@@ -25,48 +24,43 @@ export default function StudentExamDashboard({ studentInfo }) {
       const resultSnap = await getDocs(collection(db, 'examResults'));
       const allResults = resultSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      // Filter exams for this grade
-      const studentGrade = studentInfo.grade?.replace('Grade ', '');
-      const filteredExams = allExams.filter(exam =>
-        exam.grade?.replace('Grade ', '') === studentGrade
+      const grade = studentInfo.grade?.replace('Grade ', '') || '';
+      const filteredExams = allExams.filter(
+        exam => exam.grade?.replace('Grade ', '') === grade
       );
 
-      // Group by subject
       const grouped = {};
-      filteredExams.forEach(exam => {
-        const subject = exam.subject || 'Other';
-        if (!grouped[subject]) grouped[subject] = [];
-        grouped[subject].push(exam);
+      // ✅ Only use student’s own subjects:
+      studentInfo.subjects?.forEach(subject => {
+        grouped[subject] = filteredExams.filter(exam => exam.subject === subject);
       });
 
-      // Filter results for this student
-      const studentFilteredResults = allResults.filter(r => r.name === studentInfo.name);
-
       setGroupedExams(grouped);
-      setStudentResults(studentFilteredResults);
+      const myResults = allResults.filter(r => r.name === studentInfo.name);
+      setStudentResults(myResults);
     };
 
     fetchData();
   }, [studentInfo, navigate]);
 
-  // ✅ Handle exam click
   const handleExamClick = async (exam) => {
-    const attemptsKey = `${studentInfo.name}_${exam.title}_attempts`;
-    const attempts = parseInt(localStorage.getItem(attemptsKey)) || 0;
+    const key = `${studentInfo.name}_${exam.title}_attempts`;
+    const attempts = parseInt(localStorage.getItem(key)) || 0;
 
     if (attempts >= 3) {
-      Swal.fire('⛔ Max Attempts', 'You have already taken this exam 3 times.', 'error');
+      await Swal.fire('⛔ Max Attempts', 'You have already taken this exam 3 times.', 'error');
       return;
     }
 
     const confirm = await Swal.fire({
       title: `Start "${exam.title}"?`,
-      text: `You have ${3 - attempts} attempt(s) left.`,
+      text: `Attempts left: ${3 - attempts}`,
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Start Exam',
+      confirmButtonText: 'Start',
+      cancelButtonText: 'Cancel',
       confirmButtonColor: '#22c55e',
-      cancelButtonColor: '#dc2626',
+      cancelButtonColor: '#ef4444',
     });
 
     if (confirm.isConfirmed) {
@@ -98,14 +92,14 @@ export default function StudentExamDashboard({ studentInfo }) {
 
   const getCardColor = (percentage) => {
     if (percentage >= 50) return 'border-green-500 bg-green-50';
-    if (percentage > 0 && percentage < 50) return 'border-red-500 bg-red-50';
+    if (percentage > 0) return 'border-red-500 bg-red-50';
     return 'border-gray-300 bg-white';
   };
 
   const getStatusBadge = (percentage) => {
-    if (percentage >= 50) return <span className="px-2 py-0.5 text-xs font-semibold text-green-700 bg-green-200 rounded">✅ Passed</span>;
-    if (percentage > 0 && percentage < 50) return <span className="px-2 py-0.5 text-xs font-semibold text-red-700 bg-red-200 rounded">❌ Failed</span>;
-    return <span className="px-2 py-0.5 text-xs font-semibold text-gray-700 bg-gray-200 rounded">🆕 New</span>;
+    if (percentage >= 50) return <span className="inline-block px-2 py-0.5 text-xs font-semibold text-green-700 bg-green-200 rounded">✅ Passed</span>;
+    if (percentage > 0) return <span className="inline-block px-2 py-0.5 text-xs font-semibold text-red-700 bg-red-200 rounded">❌ Failed</span>;
+    return <span className="inline-block px-2 py-0.5 text-xs font-semibold text-gray-700 bg-gray-200 rounded">🆕 New</span>;
   };
 
   const renderCircleProgress = (attempts) => {
@@ -134,7 +128,7 @@ export default function StudentExamDashboard({ studentInfo }) {
           stroke={color}
           fill="transparent"
           strokeWidth={stroke}
-          strokeDasharray={circumference + ' ' + circumference}
+          strokeDasharray={`${circumference} ${circumference}`}
           style={{ strokeDashoffset, transition: 'stroke-dashoffset 0.35s' }}
           strokeLinecap="round"
           r={normalizedRadius}
@@ -154,18 +148,17 @@ export default function StudentExamDashboard({ studentInfo }) {
     );
   };
 
-  // ✅ Logout
   const handleLogout = async () => {
     const confirm = await Swal.fire({
       title: 'Logout?',
       text: 'Are you sure you want to log out?',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Yes, logout',
-      confirmButtonColor: '#dc2626',
-      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Yes, Logout',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#9CA3AF',
     });
-
     if (confirm.isConfirmed) {
       await signOut(auth);
       localStorage.clear();
@@ -180,7 +173,7 @@ export default function StudentExamDashboard({ studentInfo }) {
       </h2>
 
       {Object.keys(groupedExams).length === 0 ? (
-        <p className="text-center text-gray-500">No exams available right now.</p>
+        <p className="text-center text-gray-500">No exams available for your subjects.</p>
       ) : (
         Object.entries(groupedExams).map(([subject, exams]) => (
           <div key={subject} className="mb-6">
@@ -200,8 +193,8 @@ export default function StudentExamDashboard({ studentInfo }) {
                   return (
                     <div
                       key={i}
-                      onClick={() => handleExamClick(exam)}
                       className={`p-4 border rounded-lg shadow hover:shadow-lg transition cursor-pointer hover:bg-blue-50 ${getCardColor(percentage)}`}
+                      onClick={() => handleExamClick(exam)}
                     >
                       <div className="flex justify-between items-center mb-2">
                         <h4 className="font-bold text-blue-800">{exam.title}</h4>
@@ -209,9 +202,7 @@ export default function StudentExamDashboard({ studentInfo }) {
                       </div>
                       <p className="text-sm text-gray-600">Subject: {subject}</p>
                       <p className="text-xs text-gray-400">Grade: {exam.grade}</p>
-
                       <div className="flex justify-center my-3">{renderCircleProgress(attempts)}</div>
-
                       <p className="text-xs text-gray-500 text-center">Last Attempt: {getLastAttempt(exam)}</p>
                       <p className="text-xs text-purple-600 font-semibold text-center">
                         Last Mark: {lastResult?.percentage ? `${lastResult.percentage}%` : 'N/A'}
@@ -230,12 +221,12 @@ export default function StudentExamDashboard({ studentInfo }) {
         ))
       )}
 
-      <div className="text-center mt-8">
+      <div className="text-center mt-6">
         <button
           onClick={handleLogout}
           className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
         >
-          Logout
+          🔒 Logout
         </button>
       </div>
     </div>

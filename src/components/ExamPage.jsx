@@ -23,12 +23,10 @@ export default function ExamPage({ studentInfo, addResult }) {
   const [submitted, setSubmitted] = useState(false);
   const [examResults, setExamResults] = useState([]);
 
-  const subjects = [
-    'Mathematics', 'LO', 'English', 'History', 'Geography',
-    'CAT', 'Afrikans', 'Business', 'Physics', 'Creative Arts', 'Xhosa'
-  ];
+  // ✅ 1️⃣ Use student’s own subjects if available
+  const subjects = studentInfo?.subjects || [];
 
-  // ✅ 1️⃣ Check student info and fetch data
+  // ✅ 2️⃣ Check student info and fetch data
   useEffect(() => {
     if (!studentInfo || !studentInfo.name) {
       navigate('/');
@@ -52,7 +50,7 @@ export default function ExamPage({ studentInfo, addResult }) {
     fetchData();
   }, [studentInfo, navigate]);
 
-  // ✅ 2️⃣ Handle exam selection
+  // ✅ 3️⃣ Handle exam selection
   const handleSelectExam = (exam) => {
     const key = `${studentInfo.name}_${exam.title}_attempts`;
     const attempts = parseInt(localStorage.getItem(key)) || 0;
@@ -66,7 +64,7 @@ export default function ExamPage({ studentInfo, addResult }) {
     localStorage.setItem('examStartTime', new Date().toISOString());
   };
 
-  // ✅ 3️⃣ Handle exam submission
+  // ✅ 4️⃣ Handle exam submission
   const handleSubmit = async () => {
     if (Object.keys(answers).length < selectedExam.questions.length) {
       Swal.fire('Incomplete', 'Answer all questions before submitting.', 'warning');
@@ -119,7 +117,7 @@ export default function ExamPage({ studentInfo, addResult }) {
     navigate('/results');
   };
 
-  // ✅ 4️⃣ Timer
+  // ✅ 5️⃣ Timer
   useEffect(() => {
     if (authenticated) {
       const t = setInterval(() => {
@@ -136,14 +134,14 @@ export default function ExamPage({ studentInfo, addResult }) {
     }
   }, [authenticated]);
 
-  // ✅ 5️⃣ Logout
+  // ✅ 6️⃣ Logout
   const handleLogout = async () => {
     await signOut(auth);
     localStorage.clear();
     navigate('/');
   };
 
-  // ✅ 6️⃣ Subject click popup
+  // ✅ 7️⃣ Subject popup
   const handleSubjectClick = async (subject) => {
     setSelectedSubject(subject);
 
@@ -154,11 +152,9 @@ export default function ExamPage({ studentInfo, addResult }) {
       confirmButtonText: '📘 Take Exam',
       denyButtonText: '📄 View Results',
       cancelButtonText: '📚 Study',
-      customClass: {
-        confirmButton: 'swal2-confirm',
-        denyButton: 'swal2-deny',
-        cancelButton: 'swal2-cancel'
-      }
+      confirmButtonColor: '#3B82F6',
+      denyButtonColor: '#10B981',
+      cancelButtonColor: '#8B5CF6'
     });
 
     if (choice === true) {
@@ -170,7 +166,7 @@ export default function ExamPage({ studentInfo, addResult }) {
     }
   };
 
-  // ✅ 7️⃣ UI
+  // ✅ 8️⃣ UI
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="flex justify-between items-center mb-4">
@@ -189,15 +185,19 @@ export default function ExamPage({ studentInfo, addResult }) {
         <div className="max-w-4xl mx-auto">
           <h2 className="text-xl font-semibold mb-4 text-center">Select a Subject</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {subjects.map((subject, idx) => (
-              <div
-                key={idx}
-                className="bg-white border p-6 rounded shadow cursor-pointer hover:shadow-md text-center"
-                onClick={() => handleSubjectClick(subject)}
-              >
-                <h3 className="text-lg font-bold text-blue-700">{subject}</h3>
-              </div>
-            ))}
+            {subjects.length === 0 ? (
+              <p className="text-gray-500 text-center col-span-full">No subjects selected during registration.</p>
+            ) : (
+              subjects.map((subject, idx) => (
+                <div
+                  key={idx}
+                  className="bg-white border p-6 rounded shadow cursor-pointer hover:shadow-md text-center"
+                  onClick={() => handleSubjectClick(subject)}
+                >
+                  <h3 className="text-lg font-bold text-blue-700">{subject}</h3>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}
@@ -205,16 +205,20 @@ export default function ExamPage({ studentInfo, addResult }) {
       {viewing === 'exams' && !selectedExam && (
         <div className="max-w-4xl mx-auto mt-10">
           <h2 className="text-xl mb-4 text-center">Available Exams in {selectedSubject}</h2>
-          {availableExams.filter(e => e.subject === selectedSubject).map((exam) => (
-            <div
-              key={exam.id}
-              onClick={() => handleSelectExam(exam)}
-              className="bg-white border p-4 rounded shadow cursor-pointer mb-4 hover:shadow-md"
-            >
-              <h4 className="font-semibold">{exam.title}</h4>
-              <p className="text-sm text-gray-500">{exam.subject}</p>
-            </div>
-          ))}
+          {availableExams.filter(e => e.subject === selectedSubject).length === 0 ? (
+            <p className="text-center text-gray-500">No exams available for this subject.</p>
+          ) : (
+            availableExams.filter(e => e.subject === selectedSubject).map((exam) => (
+              <div
+                key={exam.id}
+                onClick={() => handleSelectExam(exam)}
+                className="bg-white border p-4 rounded shadow cursor-pointer mb-4 hover:shadow-md"
+              >
+                <h4 className="font-semibold">{exam.title}</h4>
+                <p className="text-sm text-gray-500">{exam.subject}</p>
+              </div>
+            ))
+          )}
         </div>
       )}
 

@@ -24,7 +24,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Navbar */}
-      <header className="fixed top-0 left-0 w-full flex justify-between items-center p-6 bg-gray-800 text-white shadow-md z-50">
+      <header className="fixed top-0 left-0 w-full flex justify-between items-center p-10 bg-gray-800 text-white shadow-md z-50">
         <Link to="/" className="flex items-center space-x-2">
           <img src={amic_hub} alt="Logo" className="h-10 w-10 rounded-full" />
           <span className="text-lg font-bold">Amic Learning Hub</span>
