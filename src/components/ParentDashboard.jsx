@@ -1,19 +1,24 @@
+// ✅ ParentDashboard.jsx — Fully Updated with `setDoc` fix & best practices
+
 import React, { useEffect, useState } from 'react';
 import { db, auth } from '../utils/firebase';
 import {
   doc,
   getDoc,
+  setDoc,   // ✅ Correctly imported
   collection,
   query,
   where,
-  getDocs
+  getDocs,
 } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import ParentChatBox from '../utils/ParentChatBox';
+import Swal from 'sweetalert2';
 
 export default function ParentDashboard() {
   const navigate = useNavigate();
+
   const [parentId, setParentId] = useState(localStorage.getItem('parentId') || '');
   const [childInfo, setChildInfo] = useState(null);
   const [results, setResults] = useState([]);
@@ -21,110 +26,132 @@ export default function ParentDashboard() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // 🔐 Resolve parentId from auth
+  /**
+   * ✅ Automatically prompt parent to link with child if needed.
+   * ✅ Uses Firestore `setDoc` properly to store child link.
+   */
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (!user || !user.email) {
-        navigate('/parent-login');
-        return;
-      }
-
+    const fetchParentData = async () => {
       try {
-        const q = query(collection(db, 'parents'), where('email', '==', user.email));
-        const snap = await getDocs(q);
-        if (snap.empty) {
-          setErrorMsg('Parent not found in Firestore.');
-          setLoading(false);
+        // ✅ 1) Check if parent is logged in
+        const user = auth.currentUser;
+        if (!user) {
+          navigate('/parent-login');
           return;
         }
 
-        const parentDoc = snap.docs[0];
-        const fetchedParentId = parentDoc.id;
-        setParentId(fetchedParentId);
-        localStorage.setItem('parentId', fetchedParentId);
-      } catch (err) {
-        console.error('Error fetching parent:', err);
-        setErrorMsg('Something went wrong.');
-        setLoading(false);
-      }
-    });
+        const id = localStorage.getItem('parentId') || user.uid;
+        setParentId(id);
 
-    return () => unsubscribe();
-  }, [navigate]);
-
-  // 📦 Load child and results
-  useEffect(() => {
-    const loadDashboardData = async () => {
-      if (!parentId) return;
-
-      try {
-        const parentRef = doc(db, 'parents', parentId);
+        const parentRef = doc(db, 'parents', id);
         const parentSnap = await getDoc(parentRef);
-        if (!parentSnap.exists()) {
-          setErrorMsg('Parent record not found.');
-          setLoading(false);
-          return;
+
+        let childId;
+
+        // ✅ 2) If no linked child, prompt to select & link
+        if (!parentSnap.exists() || !parentSnap.data().childId) {
+          const studentsSnap = await getDocs(collection(db, 'students'));
+          const students = studentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+          const grades = [...new Set(students.map(s => s.grade))];
+
+          const { value: grade } = await Swal.fire({
+            title: 'Select Grade',
+            input: 'select',
+            inputOptions: grades.reduce((acc, g) => {
+              acc[g] = g;
+              return acc;
+            }, {}),
+            inputPlaceholder: 'Select grade',
+            confirmButtonText: 'Next',
+            inputValidator: (value) => !value && 'You must select a grade'
+          });
+
+          if (!grade) throw new Error('Grade not selected.');
+
+          const filtered = students.filter(s => s.grade === grade);
+          const options = filtered.reduce((acc, s) => {
+            acc[s.id] = s.name;
+            return acc;
+          }, {});
+
+          const { value: selectedChildId } = await Swal.fire({
+            title: `Select Child in ${grade}`,
+            input: 'select',
+            inputOptions: options,
+            inputPlaceholder: 'Select child',
+            confirmButtonText: 'Link & Continue',
+            inputValidator: (value) => !value && 'You must select a child'
+          });
+
+          if (!selectedChildId) throw new Error('Child not selected.');
+
+          // ✅ Proper Firestore write using `setDoc`
+          await setDoc(doc(db, 'parents', id), { childId: selectedChildId }, { merge: true });
+
+          childId = selectedChildId;
+
+        } else {
+          childId = parentSnap.data().childId;
         }
 
-        const { childId, teacherId } = parentSnap.data();
-
-        if (!childId || !teacherId) {
-          setErrorMsg('Missing child or teacher ID in parent record.');
-          setLoading(false);
-          return;
-        }
-
-        setTeacherId(teacherId);
-
+        // ✅ 3) Load child info
         const childRef = doc(db, 'students', childId);
         const childSnap = await getDoc(childRef);
-        if (!childSnap.exists()) {
-          setErrorMsg('Student record not found.');
-          setLoading(false);
-          return;
-        }
+        if (!childSnap.exists()) throw new Error('Linked child not found.');
 
-        setChildInfo({ id: childId, ...childSnap.data() });
+        const child = { id: childId, ...childSnap.data() };
+        setChildInfo(child);
 
-        const resultsQuery = query(
-          collection(db, 'examResults'),
-          where('studentId', '==', childId)
+        // ✅ 4) Get linked teacherId
+        const linkedTeacherId = child.teacherId;
+        if (!linkedTeacherId) throw new Error('No teacher linked.');
+        setTeacherId(linkedTeacherId);
+
+        // ✅ 5) Load child results
+        const resSnap = await getDocs(
+          query(collection(db, 'examResults'), where('studentId', '==', childId))
         );
-        const resultsSnap = await getDocs(resultsQuery);
-        setResults(resultsSnap.docs.map(doc => doc.data()));
+        setResults(resSnap.docs.map(doc => doc.data()));
+
+        setLoading(false);
+
       } catch (err) {
-        console.error('Error loading dashboard:', err);
-        setErrorMsg('Failed to load dashboard.');
-      } finally {
+        console.error('Parent dashboard error:', err);
+        setErrorMsg(err.message || 'Something went wrong.');
         setLoading(false);
       }
     };
 
-    if (parentId) {
-      loadDashboardData();
-    }
-  }, [parentId]);
+    fetchParentData();
+  }, [navigate]);
 
-  // 🔓 Handle logout
+  /**
+   * ✅ Logout clears everything and redirects.
+   */
   const handleLogout = async () => {
-    try {
+    const confirm = await Swal.fire({
+      title: 'Logout?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, logout'
+    });
+    if (confirm.isConfirmed) {
       await signOut(auth);
-      localStorage.removeItem('parentId');
+      localStorage.clear();
       navigate('/');
-    } catch (err) {
-      console.error('Logout error:', err);
     }
   };
 
-  // ⏳ UI States
+  // ✅ Render states
   if (loading) return <p className="p-4">Loading dashboard...</p>;
   if (errorMsg) return <p className="p-4 text-red-500">{errorMsg}</p>;
 
   return (
     <>
-      {parentId && childInfo?.id && teacherId && (
+      {childInfo?.id && teacherId && (
         <ParentChatBox
-          parentId={parentId}
+          parentId={parentId || 'guest-parent'}
           childId={childInfo.id}
           teacherId={teacherId}
         />

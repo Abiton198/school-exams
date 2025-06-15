@@ -5,14 +5,40 @@
 
 
 
-/* confirm submit exam button */
-.swal2-confirm-green {
-    background-color: #28a745 !important; /* Bootstrap green */
-    color: white !important;
-  }
   
-  .swal2-cancel-red {
-    background-color: #dc3545 !important; /* Bootstrap red */
-    color: white !important;
-  }
-  
+/* ✅ SweetAlert custom confirm & cancel buttons */
+.swal2-confirm {
+  background-color: #16a34a !important; /* Tailwind green-600 */
+  color: white !important;
+  border: none !important;
+  padding: 0.5em 1.5em !important;
+  border-radius: 4px !important;
+}
+
+.swal2-cancel {
+  background-color: #dc2626 !important; /* Tailwind red-600 */
+  color: white !important;
+  border: none !important;
+  padding: 0.5em 1.5em !important;
+  border-radius: 4px !important;
+}
+
+/* popup card inside student portal */
+.swal2-confirm {
+  background-color: #3b82f6 !important; /* blue for Take Exam */
+}
+
+.swal2-deny {
+  background-color: #10b981 !important; /* green for View Results */
+}
+
+.swal2-cancel {
+  background-color: #8b5cf6 !important; /* purple for Study */
+}
+
+.swal2-confirm, .swal2-deny, .swal2-cancel {
+  color: white !important;
+  border: none !important;
+  padding: 0.5em 1.5em !important;
+  border-radius: 4px !important;
+}

@@ -7,7 +7,6 @@ import { useNavigate } from 'react-router-dom';
 
 // 🔧 Helper: Calculate updated scores and percentage
 function calculateUpdatedResult(result) {
-  
   const updatedAnswers = result.answers.map((a) => {
     const answer = {
       ...a,
@@ -53,18 +52,27 @@ export default function AllResults() {
   const [markingData, setMarkingData] = useState(null);
   const [feedback, setFeedback] = useState('');
   const navigate = useNavigate();
-  // 🔐 Admin password protection
+
+  // ✅ Admin access: Name dropdown instead of password
   useEffect(() => {
-    const checkAdmin = async () => {
-      const { value: password, isConfirmed } = await Swal.fire({
-        title: 'Admin Access Required',
-        input: 'password',
-        inputLabel: 'Enter admin password',
+    const askAdminName = async () => {
+      const { value: name } = await Swal.fire({
+        title: 'Admin Login',
+        input: 'select',
+        inputOptions: {
+          'Mr. Abiton': 'Abiton',
+          'Mr. Chris': 'Chris',
+          'Principal ': 'Lavonne'
+        },
+        inputPlaceholder: 'Select your name',
         showCancelButton: true,
-        inputPlaceholder: 'Password',
+        confirmButtonText: 'Continue',
+        inputValidator: (value) => {
+          if (!value) return 'Please select a name.';
+        }
       });
 
-      if (isConfirmed && password === 'admin123') {
+      if (name) {
         setAccessGranted(true);
         // 🔄 Listen to real-time updates in examResults
         onSnapshot(collection(db, 'examResults'), (snapshot) => {
@@ -72,9 +80,10 @@ export default function AllResults() {
           setResults(fetched);
         });
       }
+
       setAccessChecked(true);
     };
-    checkAdmin();
+    askAdminName();
   }, []);
 
   if (!accessChecked) return <div className="pt-28 text-center">Checking access...</div>;
@@ -86,19 +95,19 @@ export default function AllResults() {
       <StatisticsPanel results={results} />
 
       <div className="flex justify-center space-x-4 mb-6">
-  <button
-    onClick={() => navigate('/teacher-dashboard')}
-    className="bg-purple-600 text-white px-4 py-2 rounded text-sm hover:bg-purple-700"
-  >
-    Teacher
-  </button>
-  <button
-    onClick={() => navigate('/exam-manager')}
-    className="bg-indigo-600 text-white px-4 py-2 rounded text-sm hover:bg-indigo-700"
-  >
-    🛠 Exam Manager
-  </button>
-</div>
+        <button
+          onClick={() => navigate('/teacher-dashboard')}
+          className="bg-purple-600 text-white px-4 py-2 rounded text-sm hover:bg-purple-700"
+        >
+          Teacher
+        </button>
+        <button
+          onClick={() => navigate('/exam-manager')}
+          className="bg-indigo-600 text-white px-4 py-2 rounded text-sm hover:bg-indigo-700"
+        >
+          🛠 Exam Manager
+        </button>
+      </div>
 
       <table className="w-full table-auto border mt-6 border-gray-300">
         <thead className="bg-blue-600 text-white">

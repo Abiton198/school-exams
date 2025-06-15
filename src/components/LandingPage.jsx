@@ -1,135 +1,164 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import QrScanner from 'react-qr-scanner';
-import { db } from '../utils/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import Swal from 'sweetalert2';
+import { auth, db } from '../utils/firebase';
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
+  onAuthStateChanged
+} from 'firebase/auth';
+import {
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  setDoc
+} from 'firebase/firestore';
 
-export default function LandingPage() {
+export default function LandingPage({ setStudentInfo }) {
   const navigate = useNavigate();
-  const [scanningRole, setScanningRole] = useState(null); // Current role being scanned
-  const [scannedUser, setScannedUser] = useState(null);   // User data after successful scan
-  const [error, setError] = useState('');                 // Error message
-  const [scanned, setScanned] = useState(false);          // Flag for successful scan
 
-  // Handle card click to start scanning for a specific role
-  const handleCardClick = (role) => {
-    setScanningRole(role);
-    setError('');
-    setScanned(false);
-    setScannedUser(null);
-  };
-
-  // Handle QR scan result
-  const handleScan = async (result) => {
-    if (!result || !result.text || scanned || !scanningRole) return;
-
-    const token = result.text;
-
-    try {
-      const q = query(collection(db, scanningRole), where('qrToken', '==', token));
-      const snapshot = await getDocs(q);
-
-      if (!snapshot.empty) {
-        const user = snapshot.docs[0].data();
-        const userId = snapshot.docs[0].id;
-        setScannedUser({ ...user, id: userId });
-        setScanned(true);
-
-        // Store session and redirect
-        if (scanningRole === 'students') {
-          localStorage.setItem('user', JSON.stringify({ ...user, role: 'students', id: userId }));
-          setTimeout(() => navigate('/student-dashboard'), 1500);
-        } else if (scanningRole === 'parents') {
-          localStorage.setItem('parentName', user.name);
-          localStorage.setItem('parentId', userId);
-          setTimeout(() => navigate('/parent-dashboard'), 1500);
-        } else if (scanningRole === 'teachers') {
-          localStorage.setItem('teacherName', user.name);
-          localStorage.setItem('teacherSubject', user.subject || '');
-          setTimeout(() => navigate('/teacher-dashboard'), 1500);
-        } else if (scanningRole === 'admins') {
-          localStorage.setItem('adminName', user.name);
-          setTimeout(() => navigate('/admin'), 1500);
+  // ✅ Auto-redirect if already signed in + role exists
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const roles = ['students', 'teachers', 'parents', 'admins'];
+        for (const role of roles) {
+          if (localStorage.getItem(`${role}Id`)) {
+            if (role === 'students') navigate('/exam');
+            else if (role === 'teachers') navigate('/teacher-dashboard');
+            else if (role === 'parents') navigate('/parent-dashboard');
+            else if (role === 'admins') navigate('/admin');
+            break;
+          }
         }
-      } else {
-        setError('QR code not linked to any user.');
       }
-    } catch (err) {
-      console.error(err);
-      setError('Failed to process QR code.');
+    });
+    return () => unsub();
+  }, [navigate]);
+
+  // ✅ Handler for all role clicks
+  const handleRoleClick = async (role) => {
+    if (role === 'students') {
+      try {
+        // 🔍 1️⃣ Fetch students
+        const snap = await getDocs(collection(db, 'students'));
+        const students = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        const options = students.reduce((acc, s) => {
+          acc[s.id] = `${s.name} (${s.grade})`;
+          return acc;
+        }, {});
+
+        // 📋 2️⃣ Show dropdown — no need for inline colors, CSS will style buttons
+        const { value: selectedId } = await Swal.fire({
+          title: 'Select Your Name',
+          input: 'select',
+          inputOptions: options,
+          inputPlaceholder: 'Choose your name...',
+          confirmButtonText: 'Continue',
+          showCancelButton: true
+        });
+
+        if (!selectedId) return;
+
+        const selectedStudent = students.find(s => s.id === selectedId);
+
+        // ✅ 3️⃣ Sign in with Google
+        const provider = new GoogleAuthProvider();
+        const res = await signInWithPopup(auth, provider);
+        const user = res.user;
+
+        // ✅ 4️⃣ Save info locally
+        localStorage.setItem('studentsId', user.uid);
+        localStorage.setItem('studentInfo', JSON.stringify(selectedStudent));
+        if (setStudentInfo) setStudentInfo(selectedStudent);
+
+        // ✅ 5️⃣ Redirect
+        navigate('/exam');
+
+      } catch (err) {
+        console.error(err);
+        Swal.fire('Oops!', err.message, 'error');
+      }
+    } else {
+      // ✅ Other roles: Google sign-in only
+      const confirm = await Swal.fire({
+        title: `${role.charAt(0).toUpperCase() + role.slice(1)} Sign In`,
+        text: `Sign in securely with Google.`,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Sign In',
+        cancelButtonText: 'Cancel'
+      });
+
+      if (!confirm.isConfirmed) return;
+
+      try {
+        const provider = new GoogleAuthProvider();
+        const res = await signInWithPopup(auth, provider);
+        const user = res.user;
+
+        const ref = doc(db, role, user.uid);
+        const snap = await getDoc(ref);
+
+        if (!snap.exists()) {
+          await setDoc(ref, {
+            name: user.displayName || '',
+            email: user.email || '',
+            createdAt: new Date().toISOString(),
+          });
+        }
+
+        localStorage.setItem(`${role}Id`, user.uid);
+        localStorage.setItem(`${role}Name`, user.displayName || '');
+
+        if (role === 'teachers') navigate('/teacher-dashboard');
+        else if (role === 'parents') navigate('/parent-dashboard');
+        else navigate('/admin');
+
+      } catch (err) {
+        console.error(err);
+        Swal.fire('Oops!', err.message, 'error');
+      }
     }
   };
 
-  // Handle scanner error
-  const handleError = (err) => {
-    console.error(err);
-    setError('Camera error. Please try again or allow camera access.');
-  };
-
-  // Card data for different user roles
   const cards = [
-    { label: 'Student', color: 'bg-blue-500', role: 'students', icon: '🎓' },
-    { label: 'Teacher', color: 'bg-green-500', role: 'teachers', icon: '🧑‍🏫' },
-    { label: 'Parent', color: 'bg-yellow-400', role: 'parents', icon: '👨‍👩‍👧' },
-    { label: 'Admin', color: 'bg-red-500', role: 'admins', icon: '🛠️' },
+    { label: 'Student', gradient: 'from-blue-500 to-blue-700', role: 'students', icon: '🎓' },
+    { label: 'Teacher', gradient: 'from-green-500 to-green-700', role: 'teachers', icon: '🧑‍🏫' },
+    { label: 'Parent', gradient: 'from-yellow-400 to-yellow-600', role: 'parents', icon: '👨‍👩‍👧' },
+    { label: 'Admin', gradient: 'from-red-500 to-red-700', role: 'admins', icon: '🛠️' },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-start pt-20 pb-48 px-4 relative">
-      {/* Role selection cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl">
+    <div className="min-h-screen flex flex-col items-center justify-start pt-24 pb-48 px-4 bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden">
+      {/* Background Glow */}
+      <div className="absolute -top-32 -left-32 w-[500px] h-[500px] bg-gradient-to-r from-blue-500 to-purple-600 opacity-20 rounded-full blur-3xl animate-pulse"></div>
+
+      <h1 className="text-5xl md:text-6xl font-extrabold mb-4 text-center text-white drop-shadow-md">
+        🚀 Amic Learning Hub
+      </h1>
+      <p className="text-lg md:text-xl text-gray-300 mb-12 text-center max-w-xl">
+        Secure Google Sign-In for Students, Teachers, Parents & Admins — with name selection for students.
+      </p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 w-full max-w-6xl">
         {cards.map((card, index) => (
           <div
             key={index}
-            onClick={() => handleCardClick(card.role)}
-            className={`cursor-pointer p-6 rounded-xl text-center text-white shadow-xl transform transition duration-500 hover:scale-105 hover:shadow-2xl ${card.color}`}
+            onClick={() => handleRoleClick(card.role)}
+            className={`cursor-pointer p-6 rounded-2xl text-center shadow-xl transform transition duration-500
+              hover:scale-105 hover:shadow-2xl bg-gradient-to-br ${card.gradient} relative overflow-hidden`}
           >
-            <div className="w-24 h-24 mx-auto rounded-full flex items-center justify-center border-4 border-white text-3xl">
+            <div className="absolute inset-0 bg-white opacity-0 hover:opacity-10 transition"></div>
+            <div className="w-24 h-24 mx-auto rounded-full flex items-center justify-center border-4 border-white text-4xl shadow-inner bg-white/10">
               {card.icon}
             </div>
-            <p className="mt-4 text-xl font-semibold">{card.label} QR Login</p>
+            <p className="mt-5 text-2xl font-bold tracking-wide text-white drop-shadow">{card.label} Login</p>
           </div>
         ))}
       </div>
-
-      {/* QR Scanner Modal */}
-      {scanningRole && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 shadow-lg text-black max-w-md w-full relative">
-            <h2 className="text-xl font-bold mb-3 text-center capitalize">
-              Scan {scanningRole.slice(0, -1)} QR Code
-            </h2>
-
-            {!scanned ? (
-              <QrScanner
-                delay={300}
-                onError={handleError}
-                onScan={handleScan}
-                style={{ width: '100%' }}
-              />
-            ) : (
-              <div className="text-center mt-6">
-                <div className="text-green-600 text-3xl font-bold animate-bounce mb-2">✅ Success!</div>
-                <p className="text-lg">{scannedUser?.name}</p>
-              </div>
-            )}
-
-            {error && <p className="text-red-600 mt-3 text-center">{error}</p>}
-
-            <button
-              onClick={() => {
-                setScanningRole(null);
-                setScanned(false);
-                setError('');
-                setScannedUser(null);
-              }}
-              className="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

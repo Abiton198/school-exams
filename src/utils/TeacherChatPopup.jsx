@@ -1,4 +1,5 @@
-// src/utils/TeacherChatPopup.jsx
+// ✅ TeacherChatPopup.jsx — improved unread badge logic: shows ONLY unresponded + unread
+
 import React, { useEffect, useState } from 'react';
 import {
   collection,
@@ -13,55 +14,70 @@ import {
 import { db } from './firebase';
 
 export default function TeacherChatPopup({ teacherId, teacherName }) {
-  const [messages, setMessages] = useState([]);
-  const [open, setOpen] = useState(false);
-  const [replyMap, setReplyMap] = useState({});
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [messages, setMessages] = useState([]);   // 📨 All parent messages for this teacher
+  const [open, setOpen] = useState(false);        // 🔘 Panel open/close
+  const [replyMap, setReplyMap] = useState({});   // ✏️ Text input per message
+  const [unreadCount, setUnreadCount] = useState(0); // 🔴 Badge for unread & unresponded
 
-  // 🔄 Fetch messages from 'messages' collection for this teacher
+  // 🔁 Live listener: only for this teacher's parent messages
   useEffect(() => {
     if (!teacherId) return;
 
-    // const q = query(
-    //   collection(db, 'parentComments'),
-    //   where('teacherId', '==', teacherId),
-    //   where('sender', '==', 'parent'), // 🧾 Only get messages from parents
-    //   orderBy('timestamp') // 🕒 Order by time
-    // );
-
-    const q = query(collection(db, 'parentComments'), orderBy('timestamp'));
-
+    const q = query(
+      collection(db, 'parentComments'),
+      where('teacherId', '==', teacherId),
+      orderBy('timestamp')
+    );
 
     const unsub = onSnapshot(q, (snapshot) => {
       const allMsgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setMessages(allMsgs);
-      const unread = allMsgs.filter(m => !m.read).length;
-      setUnreadCount(unread);
+
+      // 🟥 Count only messages from parent: not read + no response
+      const unreadUnresponded = allMsgs.filter(
+        m => m.sender === 'parent' && !m.read && !m.response
+      );
+      setUnreadCount(unreadUnresponded.length);
     });
 
     return () => unsub();
   }, [teacherId]);
 
-  // ✅ Send a reply and mark message as read
+  // ✅ Mark message as read and add teacher reply
   const handleSend = async (msg) => {
     const replyText = replyMap[msg.id];
-    if (!replyText) return;
+    if (!replyText.trim()) return;
 
     await updateDoc(doc(db, 'parentComments', msg.id), {
-      response: replyText,
+      response: replyText.trim(),
       read: true,
       respondedAt: serverTimestamp(),
     });
 
-    setReplyMap((prev) => ({ ...prev, [msg.id]: '' }));
+    setReplyMap(prev => ({ ...prev, [msg.id]: '' }));
+  };
+
+  // ✅ When opening, mark all unresponded parent messages as read immediately
+  const toggleChat = async () => {
+    if (!open) {
+      // Only mark parent messages that have not been read & not responded
+      const toMarkRead = messages.filter(
+        m => m.sender === 'parent' && !m.read && !m.response
+      );
+      for (const m of toMarkRead) {
+        await updateDoc(doc(db, 'parentComments', m.id), { read: true });
+      }
+      setUnreadCount(0);
+    }
+    setOpen(prev => !prev);
   };
 
   return (
     <>
-      {/* 🔘 Floating Button */}
+      {/* 🔘 Floating Button with badge */}
       <div
+        onClick={toggleChat}
         className="fixed bottom-6 right-6 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg cursor-pointer z-50 flex items-center"
-        onClick={() => setOpen(!open)}
       >
         💬 Chat
         {unreadCount > 0 && (
@@ -71,7 +87,7 @@ export default function TeacherChatPopup({ teacherId, teacherName }) {
         )}
       </div>
 
-      {/* 💬 Chat Panel */}
+      {/* 📨 Chat Panel */}
       {open && (
         <div className="fixed bottom-20 right-6 bg-white w-80 max-h-[60vh] shadow-xl border rounded-lg p-4 overflow-y-auto z-50">
           <h3 className="text-lg font-semibold mb-3">📨 Parent Messages</h3>
@@ -79,7 +95,7 @@ export default function TeacherChatPopup({ teacherId, teacherName }) {
           {messages.length === 0 ? (
             <p className="text-sm text-gray-500">No messages yet.</p>
           ) : (
-            messages.map((msg) => (
+            messages.map(msg => (
               <div key={msg.id} className="mb-4 border-b pb-2">
                 <p><strong>👪 Parent:</strong> {msg.comment}</p>
                 <p className="text-sm text-gray-600 mb-1">
@@ -95,7 +111,7 @@ export default function TeacherChatPopup({ teacherId, teacherName }) {
                     <textarea
                       value={replyMap[msg.id] || ''}
                       onChange={(e) =>
-                        setReplyMap((prev) => ({ ...prev, [msg.id]: e.target.value }))
+                        setReplyMap(prev => ({ ...prev, [msg.id]: e.target.value }))
                       }
                       className="w-full p-2 border mt-1 rounded text-sm"
                       rows={2}

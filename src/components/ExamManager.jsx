@@ -3,6 +3,8 @@ import { collection, getDocs, deleteDoc, doc, updateDoc, query, where } from 'fi
 import Swal from 'sweetalert2';
 import { auth, signInAnonymously, db } from '../utils/firebase';
 import { useNavigate } from 'react-router-dom';
+import { signOut } from 'firebase/auth';
+
 
 export default function ExamManager() {
   const [exams, setExams] = useState([]);
@@ -12,44 +14,39 @@ export default function ExamManager() {
   const teacherName = teacherInfo.name || '';  
   const navigate = useNavigate();
 
-
-
-  // Authenticate and fetch only this teacher's exams
+  // ✅ Authenticate and fetch only this teacher's exams
   useEffect(() => {
     const authenticateAndFetch = async () => {
       try {
-        const userCred = await signInAnonymously(auth);
-  
+        await signInAnonymously(auth);
+
         const unsubscribe = auth.onAuthStateChanged(async (user) => {
           if (!user) return;
-  
-          console.log("✅ Signed in as:", user.uid);
-  
+
           const q = query(
             collection(db, 'exams'),
             where('subject', '==', teacherSubject),
             where('createdBy', '==', teacherName)
           );
-  
+
           const snapshot = await getDocs(q);
           const fetchedExams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  
-          console.log("✅ Exams fetched:", fetchedExams);
+
           setExams(fetchedExams);
           setLoading(false);
         });
-  
+
         return () => unsubscribe();
       } catch (err) {
         console.error("❌ Auth or fetch error:", err);
         setLoading(false);
       }
     };
-  
+
     authenticateAndFetch();
   }, [teacherSubject, teacherName]);
-  
-  // Delete exam
+
+  // ✅ Delete exam
   const handleDelete = async (examId) => {
     const confirm = await Swal.fire({
       title: 'Are you sure?',
@@ -66,13 +63,12 @@ export default function ExamManager() {
     }
   };
 
-  // Edit exam fields
+  // ✅ Edit exam — PASSWORD REMOVED
   const handleEdit = async (exam) => {
     const { value: formValues } = await Swal.fire({
       title: 'Edit Exam',
       html: `
         <input id="swal-title" class="swal2-input" placeholder="Title" value="${exam.title}">
-        <input id="swal-password" class="swal2-input" placeholder="Password" value="${exam.password}">
         <input id="swal-grade" class="swal2-input" placeholder="Grade" value="${exam.grade}">
         <input id="swal-time" class="swal2-input" type="number" placeholder="Time Limit (minutes)" value="${exam.timeLimit || ''}">
       `,
@@ -80,7 +76,6 @@ export default function ExamManager() {
       preConfirm: () => {
         return {
           title: document.getElementById('swal-title').value,
-          password: document.getElementById('swal-password').value,
           grade: document.getElementById('swal-grade').value,
           timeLimit: Number(document.getElementById('swal-time').value),
         };
@@ -90,7 +85,6 @@ export default function ExamManager() {
     if (formValues) {
       await updateDoc(doc(db, 'exams', exam.id), {
         title: formValues.title,
-        password: formValues.password,
         grade: formValues.grade,
         timeLimit: formValues.timeLimit
       });
@@ -102,9 +96,26 @@ export default function ExamManager() {
     }
   };
 
-  // Navigate to edit questions
+  // ✅ Navigate to edit questions
   const handleEditQuestions = (examId) => {
     navigate(`/edit-questions/${examId}`);
+  };
+
+
+   // ✅ LOGOUT FUNCTION — signs out securely, clears localStorage, redirects
+   const handleLogout = async () => {
+    const confirm = await Swal.fire({
+      title: 'Logout?',
+      text: 'Are you sure you want to log out?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, logout',
+    });
+    if (confirm.isConfirmed) {
+      await signOut(auth); // ✅ Firebase sign out
+      localStorage.clear(); // ✅ Remove any cached IDs & names
+      navigate('/'); // ✅ Go back to Landing Page
+    }
   };
 
   return (
@@ -126,13 +137,9 @@ export default function ExamManager() {
                 <span className="text-sm text-gray-500">Grade: {exam.grade}</span>
               </div>
               <p className="text-sm mb-1"><strong>Subject:</strong> {exam.subject}</p>
-              <p className="text-sm mb-1"><strong>Password:</strong> {exam.password}</p>
               <p className="text-sm mb-1"><strong>Time Limit:</strong> {exam.timeLimit || 'Not set'} minutes</p>
 
               <div className="flex gap-3 mt-3">
-
-
-
                 <button
                   onClick={() => handleEdit(exam)}
                   className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
@@ -153,12 +160,19 @@ export default function ExamManager() {
                 </button>
               </div>
             </div>
-            
           ))}
         </div>
-
-        
       )}
+
+      {/* LOGOUT BUTTON */}
+      <div className="text-center">
+      <button
+      onClick={handleLogout}
+      className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+    >
+      Logout
+    </button>
+      </div>
     </div>
   );
 }

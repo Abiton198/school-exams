@@ -1,4 +1,5 @@
-// src/components/AdminPanel.jsx
+// ✅ AdminPanel.jsx — password removed, name only
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
@@ -7,7 +8,7 @@ export default function AdminPanel() {
   const navigate = useNavigate();
   const [adminName, setAdminName] = useState('');
 
-  // 🔐 Ask for admin login if not already stored
+  // ✅ Ask for admin NAME only — NO password
   useEffect(() => {
     const savedAdmin = localStorage.getItem('adminName');
 
@@ -16,30 +17,18 @@ export default function AdminPanel() {
     } else {
       Swal.fire({
         title: 'Admin Login',
-        text: 'Enter admin password to access the panel',
-        input: 'password',
-        inputPlaceholder: 'Enter password',
+        text: 'Enter admin name to access the panel',
+        input: 'text',
+        inputPlaceholder: 'e.g. Mr. Nkosi',
         confirmButtonText: 'Login',
         allowOutsideClick: false,
-        preConfirm: (password) => {
-          if (password === 'admin123') {
-            return Swal.fire({
-              title: 'Enter Admin Name',
-              input: 'text',
-              inputPlaceholder: 'e.g. Mr. Nkosi',
-              inputValidator: (value) => {
-                if (!value) return 'Name is required';
-              }
-            }).then((res) => {
-              if (res.value) {
-                localStorage.setItem('adminName', res.value);
-                setAdminName(res.value);
-              }
-            });
-          } else {
-            Swal.showValidationMessage('❌ Incorrect password');
-            return false;
-          }
+        inputValidator: (value) => {
+          if (!value) return 'Name is required';
+        }
+      }).then((res) => {
+        if (res.value) {
+          localStorage.setItem('adminName', res.value);
+          setAdminName(res.value);
         }
       });
     }

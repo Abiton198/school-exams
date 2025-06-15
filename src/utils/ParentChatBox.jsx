@@ -1,4 +1,5 @@
-// src/utils/ParentChatBox.jsx
+// ✅ ParentChatBox.jsx — improved unread counter & badge logic
+
 import React, { useEffect, useState } from 'react';
 import {
   collection,
@@ -14,12 +15,12 @@ import {
 import { db } from '../utils/firebase';
 
 export default function ParentChatBox({ parentId, childId, teacherId }) {
-  const [message, setMessage] = useState(''); // 💬 Parent message input
-  const [chatMessages, setChatMessages] = useState([]); // 🧾 All messages
-  const [isOpen, setIsOpen] = useState(false); // 💬 Chat box toggle
-  const [unreadCount, setUnreadCount] = useState(0); // 🔴 Badge for unread
+  const [message, setMessage] = useState('');      // 📝 Parent's input
+  const [chatMessages, setChatMessages] = useState([]); // 📬 All chat messages
+  const [isOpen, setIsOpen] = useState(false);     // 💬 Panel toggle
+  const [unreadCount, setUnreadCount] = useState(0); // 🔴 Badge
 
-  // 🔁 Fetch messages in real time
+  // 🔄 Real-time messages + unread count
   useEffect(() => {
     if (!parentId || !childId || !teacherId) return;
 
@@ -29,24 +30,22 @@ export default function ParentChatBox({ parentId, childId, teacherId }) {
       where('childId', '==', childId),
       where('teacherId', '==', teacherId),
       orderBy('timestamp')
-    );     
+    );
 
     const unsubscribe = onSnapshot(chatQuery, async (snapshot) => {
       const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      console.log('✅ Messages received:', messages);
       setChatMessages(messages);
 
-
-      // 🟥 Count unread teacher responses
-      const unread = snapshot.docs.filter(
-        doc => doc.data().sender === 'teacher' && !doc.data().read
+      // ✅ Count teacher messages not read yet
+      const unreadTeacherMsgs = snapshot.docs.filter(
+        d => d.data().sender === 'teacher' && !d.data().read
       );
-      setUnreadCount(unread.length);
+      setUnreadCount(unreadTeacherMsgs.length);
 
-      // ✅ Mark unread as read if panel is open
-      if (isOpen && unread.length > 0) {
-        for (const docSnap of unread) {
-          await updateDoc(doc(db, 'parentComments', docSnap.id), { read: true });
+      // ✅ If open, mark them as read immediately
+      if (isOpen && unreadTeacherMsgs.length > 0) {
+        for (const m of unreadTeacherMsgs) {
+          await updateDoc(doc(db, 'parentComments', m.id), { read: true });
         }
         setUnreadCount(0);
       }
@@ -55,7 +54,22 @@ export default function ParentChatBox({ parentId, childId, teacherId }) {
     return () => unsubscribe();
   }, [parentId, childId, teacherId, isOpen]);
 
-  // 🚀 Send parent message
+  // ✅ Toggle panel: If opening, mark all unread as read immediately
+  const toggleChat = async () => {
+    if (!isOpen && unreadCount > 0) {
+      // Mark all unread teacher messages as read
+      const unreadTeacherMsgs = chatMessages.filter(
+        m => m.sender === 'teacher' && !m.read
+      );
+      for (const m of unreadTeacherMsgs) {
+        await updateDoc(doc(db, 'parentComments', m.id), { read: true });
+      }
+      setUnreadCount(0);
+    }
+    setIsOpen(prev => !prev);
+  };
+
+  // ✅ Parent sends a message
   const sendMessage = async () => {
     if (!message.trim()) return;
 
@@ -63,11 +77,11 @@ export default function ParentChatBox({ parentId, childId, teacherId }) {
       parentId,
       childId,
       teacherId,
-      comment: message,
+      comment: message.trim(),
       sender: 'parent',
       timestamp: serverTimestamp(),
-      read: false,
-      response: '' // start with empty response from teacher
+      read: true,  // ✅ Parent messages are immediately marked as read
+      response: '' // Teacher response field placeholder
     });
 
     setMessage('');
@@ -75,9 +89,9 @@ export default function ParentChatBox({ parentId, childId, teacherId }) {
 
   return (
     <div className="fixed bottom-6 left-6 z-50">
-      {/* 🔘 Floating Chat Button */}
+      {/* 💬 Floating Button */}
       <button
-        onClick={() => setIsOpen(prev => !prev)}
+        onClick={toggleChat}
         className="relative bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg"
       >
         💬 Chat
@@ -88,44 +102,43 @@ export default function ParentChatBox({ parentId, childId, teacherId }) {
         )}
       </button>
 
-      {/* 💬 Chat Panel */}
+      {/* 📬 Chat Panel */}
       {isOpen && (
         <div className="mt-2 w-80 h-96 bg-white border shadow-lg rounded-lg flex flex-col">
           <div className="bg-blue-600 text-white px-4 py-2 rounded-t-lg font-semibold">
             Chat with Teacher
           </div>
 
-         
-        {/* 📨 Messages */}
-<div className="flex-1 overflow-y-auto p-4 space-y-3">
-  {chatMessages.map((msg, index) => (
-    <div key={index}>
-      {/* Parent message */}
-      <div className={`text-sm ${msg.sender === 'parent' ? 'text-right' : 'text-left'}`}>
-        <p
-          className={`inline-block px-3 py-2 rounded ${
-            msg.sender === 'parent'
-              ? 'bg-blue-100 text-blue-800'
-              : 'bg-green-100 text-green-800'
-          }`}
-        >
-          {msg.comment || '[No message]'}
-        </p>
-      </div>
+          {/* 📨 Chat History */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {chatMessages.map((msg, idx) => (
+              <div key={idx}>
+                {/* 💬 Parent message */}
+                <div className={`text-sm ${msg.sender === 'parent' ? 'text-right' : 'text-left'}`}>
+                  <p
+                    className={`inline-block px-3 py-2 rounded ${
+                      msg.sender === 'parent'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-green-100 text-green-800'
+                    }`}
+                  >
+                    {msg.comment || '[No message]'}
+                  </p>
+                </div>
 
-      {/* ✅ Display teacher's response if it exists */}
-      {msg.response && (
-        <div className="text-left mt-1">
-          <p className="inline-block bg-green-100 text-green-800 px-3 py-2 rounded text-sm">
-            👨‍🏫 {msg.response}
-          </p>
-        </div>
-      )}
-    </div>
-  ))}
-</div>
+                {/* ✅ Teacher's response, if any */}
+                {msg.response && (
+                  <div className="text-left mt-1">
+                    <p className="inline-block bg-green-100 text-green-800 px-3 py-2 rounded text-sm">
+                      👨‍🏫 {msg.response}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
 
-          {/* ✏️ Input */}
+          {/* 📝 Input */}
           <div className="p-3 border-t flex gap-2">
             <input
               value={message}

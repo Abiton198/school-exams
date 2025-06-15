@@ -1,69 +1,106 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../utils/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { studentList } from '../data/studentData';
+import {
+  signInWithPopup,
+  GoogleAuthProvider
+} from 'firebase/auth';
+import {
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  getDocs
+} from 'firebase/firestore';
+import Swal from 'sweetalert2';
 
 export default function ParentLinkForm() {
   const [parentName, setParentName] = useState('');
   const [parentEmail, setParentEmail] = useState('');
-  const [parentPassword, setParentPassword] = useState('');
-  const [grade, setGrade] = useState('');
-  const [student, setStudent] = useState('');
-  const [message, setMessage] = useState('');
+  const [gradeOptions, setGradeOptions] = useState([]);
+  const [selectedGrade, setSelectedGrade] = useState('');
+  const [studentsInGrade, setStudentsInGrade] = useState([]);
+  const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async () => {
-    if (!parentName || !parentEmail || !parentPassword || !grade || !student) {
-      setMessage('Please fill in all fields.');
+  // ✅ Fetch all grades dynamically from Firestore
+  useEffect(() => {
+    const fetchGrades = async () => {
+      const snap = await getDocs(collection(db, 'students'));
+      const students = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const grades = [...new Set(students.map(s => s.grade))];
+      setGradeOptions(grades.sort());
+    };
+    fetchGrades();
+  }, []);
+
+  // ✅ When grade is selected, fetch students for that grade
+  useEffect(() => {
+    const fetchStudentsForGrade = async () => {
+      if (!selectedGrade) {
+        setStudentsInGrade([]);
+        return;
+      }
+      const q = collection(db, 'students');
+      const snap = await getDocs(q);
+      const students = snap.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(s => s.grade === selectedGrade);
+      setStudentsInGrade(students);
+    };
+    fetchStudentsForGrade();
+  }, [selectedGrade]);
+
+  // ✅ Google Sign-In, link parent, and save in Firestore
+  const handleLinkParent = async () => {
+    if (!parentName || !selectedGrade || !selectedStudentId) {
+      Swal.fire('⚠️', 'Please fill in all fields.', 'warning');
       return;
     }
 
-    const studentId = `Grade${grade}_${student.replace(/\s/g, '').toLowerCase()}`;
-
     try {
-      // 🔍 Step 1: Fetch student from Firestore to get teacherId
-      const studentRef = doc(db, 'students', studentId);
+      setLoading(true);
+
+      // 👉 1️⃣ Google Sign-In
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Save parent info
+      const studentRef = doc(db, 'students', selectedStudentId);
       const studentSnap = await getDoc(studentRef);
 
       if (!studentSnap.exists()) {
-        setMessage('Student not found in database.');
-        return;
+        throw new Error('Selected student not found in Firestore.');
       }
 
-      const studentData = studentSnap.data();
-      const teacherId = studentData.teacherId;
-
+      const { teacherId } = studentSnap.data();
       if (!teacherId) {
-        setMessage('No teacher assigned to this student.');
-        return;
+        throw new Error('Selected student has no teacher assigned.');
       }
 
-      // 🔐 Step 2: Register parent in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, parentEmail, parentPassword);
-      const parent = userCredential.user;
-
-      // 💾 Step 3: Save parent info in Firestore with teacherId
-      await setDoc(doc(db, 'parents', parent.uid), {
+      // Save in `parents` collection (parent UID from Google)
+      await setDoc(doc(db, 'parents', user.uid), {
         name: parentName,
-        email: parentEmail,
-        childId: studentId,
-        teacherId: teacherId,
+        email: user.email,
+        childId: selectedStudentId,
+        teacherId: teacherId
       });
 
-      // 👉 Redirect to dashboard
-      localStorage.setItem('parentId', parent.uid);
+      localStorage.setItem('parentId', user.uid);
       navigate('/parent-dashboard');
-    } catch (error) {
-      console.error('❌ Error linking parent:', error);
-      setMessage(error.message || 'Error occurred. Try again.');
+    } catch (err) {
+      console.error('❌ Error:', err);
+      Swal.fire('❌ Error', err.message || 'Could not complete linking.', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="p-6 max-w-md mx-auto bg-white rounded shadow">
-      <h2 className="text-xl font-bold mb-4">Link Parent to Student</h2>
+      <h2 className="text-xl font-bold mb-4">🔗 Link Parent to Student</h2>
 
       <input
         type="text"
@@ -73,57 +110,40 @@ export default function ParentLinkForm() {
         className="w-full p-2 mb-3 border rounded"
       />
 
-      <input
-        type="email"
-        placeholder="Parent Email"
-        value={parentEmail}
-        onChange={(e) => setParentEmail(e.target.value)}
-        className="w-full p-2 mb-3 border rounded"
-      />
-
-      <input
-        type="password"
-        placeholder="Create Password"
-        value={parentPassword}
-        onChange={(e) => setParentPassword(e.target.value)}
-        className="w-full p-2 mb-3 border rounded"
-      />
-
       <select
-        value={grade}
+        value={selectedGrade}
         onChange={(e) => {
-          setGrade(e.target.value);
-          setStudent('');
+          setSelectedGrade(e.target.value);
+          setSelectedStudentId('');
         }}
         className="w-full p-2 mb-3 border rounded"
       >
         <option value="">Select Grade</option>
-        {Object.keys(studentList).map((g) => (
-          <option key={g} value={g}>Grade {g}</option>
+        {gradeOptions.map(grade => (
+          <option key={grade} value={grade}>{grade}</option>
         ))}
       </select>
 
-      {grade && studentList[grade] && (
+      {studentsInGrade.length > 0 && (
         <select
-          value={student}
-          onChange={(e) => setStudent(e.target.value)}
+          value={selectedStudentId}
+          onChange={(e) => setSelectedStudentId(e.target.value)}
           className="w-full p-2 mb-3 border rounded"
         >
           <option value="">Select Student</option>
-          {studentList[grade].map((s) => (
-            <option key={s.name} value={s.name}>{s.name}</option>
+          {studentsInGrade.map(student => (
+            <option key={student.id} value={student.id}>{student.name}</option>
           ))}
         </select>
       )}
 
       <button
-        onClick={handleSubmit}
-        className="w-full bg-blue-600 text-white p-2 rounded font-semibold"
+        onClick={handleLinkParent}
+        disabled={loading}
+        className={`w-full ${loading ? 'bg-gray-400' : 'bg-green-600'} text-white p-2 rounded font-semibold`}
       >
-        Link Parent & Register
+        {loading ? 'Linking...' : 'Link & Sign in with Google'}
       </button>
-
-      {message && <p className="mt-3 text-center text-sm text-red-600">{message}</p>}
     </div>
   );
 }
