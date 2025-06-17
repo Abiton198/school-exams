@@ -23,10 +23,8 @@ export default function ExamPage({ studentInfo, addResult }) {
   const [submitted, setSubmitted] = useState(false);
   const [examResults, setExamResults] = useState([]);
 
-  // ✅ 1️⃣ Use student’s own subjects if available
   const subjects = studentInfo?.subjects || [];
 
-  // ✅ 2️⃣ Check student info and fetch data
   useEffect(() => {
     if (!studentInfo || !studentInfo.name) {
       navigate('/');
@@ -37,20 +35,46 @@ export default function ExamPage({ studentInfo, addResult }) {
     localStorage.setItem('studentInfo', JSON.stringify(studentInfo));
 
     const fetchData = async () => {
-      const snap = await getDocs(collection(db, 'exams'));
+      const snap = await getDocs(collection(db, `schools/${studentInfo.schoolId}/exams`));
       const exams = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       const grade = studentInfo.grade?.replace('Grade ', '');
       setAvailableExams(exams.filter(e => e.grade?.replace('Grade ', '') === grade));
 
-      const resSnap = await getDocs(collection(db, 'examResults'));
+      const resSnap = await getDocs(collection(db, `schools/${studentInfo.schoolId}/examResults`));
       const allResults = resSnap.docs.map(doc => doc.data());
       setExamResults(allResults.filter(r => r.name === studentInfo.name));
     };
 
     fetchData();
+
+    // ✅ Show welcome or welcome back
+    const isFirstTime = !localStorage.getItem('welcomedBefore');
+    Swal.fire({
+      title: isFirstTime ? `🎉 Welcome, ${studentInfo.name}!` : `👋 Welcome back, ${studentInfo.name}!`,
+      text: "What would you like to do today?",
+      icon: 'question',
+      showDenyButton: true,
+      showCancelButton: true,
+      confirmButtonText: '📝 Take Exam',
+      denyButtonText: '📊 View Results',
+      cancelButtonText: '📚 Study',
+      confirmButtonColor: '#3B82F6',
+      denyButtonColor: '#10B981',
+      cancelButtonColor: '#8B5CF6'
+    }).then((res) => {
+      if (res.isConfirmed) {
+        setViewing('exams');
+      } else if (res.isDenied) {
+        setViewing('results');
+      } else {
+        navigate(`/chatbot`);
+      }
+    });
+
+    localStorage.setItem('welcomedBefore', 'true');
+
   }, [studentInfo, navigate]);
 
-  // ✅ 3️⃣ Handle exam selection
   const handleSelectExam = (exam) => {
     const key = `${studentInfo.name}_${exam.title}_attempts`;
     const attempts = parseInt(localStorage.getItem(key)) || 0;
@@ -64,7 +88,6 @@ export default function ExamPage({ studentInfo, addResult }) {
     localStorage.setItem('examStartTime', new Date().toISOString());
   };
 
-  // ✅ 4️⃣ Handle exam submission
   const handleSubmit = async () => {
     if (Object.keys(answers).length < selectedExam.questions.length) {
       Swal.fire('Incomplete', 'Answer all questions before submitting.', 'warning');
@@ -110,14 +133,13 @@ export default function ExamPage({ studentInfo, addResult }) {
       answers: answerDetails,
     };
 
-    await addDoc(collection(db, 'examResults'), result);
+    await addDoc(collection(db, `schools/${studentInfo.schoolId}/examResults`), result);
     addResult(result);
     localStorage.setItem(`${studentInfo.name}_${selectedExam.title}_attempts`, result.attempts);
     localStorage.setItem(`${studentInfo.name}_${selectedExam.title}_lastAttempt`, end.toISOString());
     navigate('/results');
   };
 
-  // ✅ 5️⃣ Timer
   useEffect(() => {
     if (authenticated) {
       const t = setInterval(() => {
@@ -134,14 +156,12 @@ export default function ExamPage({ studentInfo, addResult }) {
     }
   }, [authenticated]);
 
-  // ✅ 6️⃣ Logout
   const handleLogout = async () => {
     await signOut(auth);
     localStorage.clear();
     navigate('/');
   };
 
-  // ✅ 7️⃣ Subject popup
   const handleSubjectClick = async (subject) => {
     setSelectedSubject(subject);
 
@@ -149,8 +169,8 @@ export default function ExamPage({ studentInfo, addResult }) {
       title: `What would you like to do in ${subject}?`,
       showDenyButton: true,
       showCancelButton: true,
-      confirmButtonText: '📘 Take Exam',
-      denyButtonText: '📄 View Results',
+      confirmButtonText: '📝 Take Exam',
+      denyButtonText: '📊 View Results',
       cancelButtonText: '📚 Study',
       confirmButtonColor: '#3B82F6',
       denyButtonColor: '#10B981',
@@ -166,13 +186,18 @@ export default function ExamPage({ studentInfo, addResult }) {
     }
   };
 
-  // ✅ 8️⃣ UI
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-gradient-to-b from-blue-100 via-purple-100 to-pink-100 p-6">
+      {/* ✅ Envelope-style Student Card */}
+      <div className="max-w-md mx-auto bg-gradient-to-br from-purple-600 to-blue-600 text-white p-6 rounded-xl shadow-lg mb-8">
+        <h2 className="text-2xl font-bold mb-2">🎓 {studentInfo.name}</h2>
+        <p className="text-lg">🏫 <strong>School:</strong> {studentInfo.schoolName}</p>
+        <p className="text-lg">📍 <strong>District:</strong> {studentInfo.district}</p>
+        <p className="text-lg">🗺️ <strong>Province:</strong> {studentInfo.province}</p>
+        <p className="text-lg">🎓 <strong>Grade:</strong> {studentInfo.grade}</p>
+      </div>
+
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold text-center w-full">
-          Welcome, {studentInfo?.name} ({studentInfo?.grade})
-        </h1>
         <button
           onClick={handleLogout}
           className="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700 ml-auto"
@@ -186,12 +211,12 @@ export default function ExamPage({ studentInfo, addResult }) {
           <h2 className="text-xl font-semibold mb-4 text-center">Select a Subject</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {subjects.length === 0 ? (
-              <p className="text-gray-500 text-center col-span-full">No subjects selected during registration.</p>
+              <p className="text-gray-700 text-center col-span-full">No subjects selected during registration.</p>
             ) : (
               subjects.map((subject, idx) => (
                 <div
                   key={idx}
-                  className="bg-white border p-6 rounded shadow cursor-pointer hover:shadow-md text-center"
+                  className="bg-white border p-6 rounded shadow cursor-pointer hover:shadow-md text-center hover:bg-blue-100 transition"
                   onClick={() => handleSubjectClick(subject)}
                 >
                   <h3 className="text-lg font-bold text-blue-700">{subject}</h3>
@@ -206,16 +231,16 @@ export default function ExamPage({ studentInfo, addResult }) {
         <div className="max-w-4xl mx-auto mt-10">
           <h2 className="text-xl mb-4 text-center">Available Exams in {selectedSubject}</h2>
           {availableExams.filter(e => e.subject === selectedSubject).length === 0 ? (
-            <p className="text-center text-gray-500">No exams available for this subject.</p>
+            <p className="text-center text-gray-700">No exams available for this subject.</p>
           ) : (
             availableExams.filter(e => e.subject === selectedSubject).map((exam) => (
               <div
                 key={exam.id}
                 onClick={() => handleSelectExam(exam)}
-                className="bg-white border p-4 rounded shadow cursor-pointer mb-4 hover:shadow-md"
+                className="bg-white border p-4 rounded shadow cursor-pointer mb-4 hover:shadow-md hover:bg-green-50 transition"
               >
                 <h4 className="font-semibold">{exam.title}</h4>
-                <p className="text-sm text-gray-500">{exam.subject}</p>
+                <p className="text-sm text-gray-600">{exam.subject}</p>
               </div>
             ))
           )}
@@ -226,7 +251,7 @@ export default function ExamPage({ studentInfo, addResult }) {
         <div className="max-w-3xl mx-auto mt-10">
           <h2 className="text-xl mb-4 text-center">Your Results in {selectedSubject}</h2>
           {examResults.filter(r => r.subject === selectedSubject).length === 0 ? (
-            <p className="text-gray-600 text-center">No results yet.</p>
+            <p className="text-gray-700 text-center">No results yet.</p>
           ) : (
             <ul className="space-y-4">
               {examResults.filter(r => r.subject === selectedSubject).map((res, i) => (
@@ -239,7 +264,7 @@ export default function ExamPage({ studentInfo, addResult }) {
             </ul>
           )}
           <div className="text-center mt-6">
-            <button onClick={() => { setSelectedSubject(''); setViewing(''); }} className="px-4 py-2 bg-gray-400 text-white rounded">🔙 Back</button>
+            <button onClick={() => { setSelectedSubject(''); setViewing(''); }} className="px-4 py-2 bg-gray-500 text-white rounded">🔙 Back</button>
           </div>
         </div>
       )}
