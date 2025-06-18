@@ -35,6 +35,7 @@ import {
   signInAnonymously,
 } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
+import { getStorage } from "firebase/storage"; 
 
 // Your Firebase configuration
 const firebaseConfig = {
@@ -52,6 +53,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const analytics = getAnalytics(app);
+const storage = getStorage(app);
 
 // ✅ Set persistence for auth
 setPersistence(auth, browserLocalPersistence)
@@ -62,6 +64,6 @@ setPersistence(auth, browserLocalPersistence)
     console.error("⚠️ Failed to set persistence:", error);
   });
 
-export { db, auth, signInAnonymously };
+export { db, auth,storage, signInAnonymously };
 
 
