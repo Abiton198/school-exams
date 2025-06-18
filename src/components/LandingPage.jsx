@@ -264,29 +264,39 @@ export default function LandingPage({ setStudentInfo }) {
       const provider = new GoogleAuthProvider();
       const res = await signInWithPopup(auth, provider);
       const user = res.user;
-
+  
       const studentsRef = collection(db, `schools/${schoolId}/students`);
       const snap = await getDocs(query(studentsRef, where('name', '==', name)));
       let studentDoc = null;
       if (!snap.empty) studentDoc = snap.docs[0];
-
+  
       if (isExisting && studentDoc) {
         const student = studentDoc.data();
         if (student.email && student.email !== user.email) {
-          return Swal.fire('Email Mismatch', `This student uses ${student.email}. Sign in with that email.`, 'error');
+          // ✅ MISMATCH → sign out immediately
+          await auth.signOut();
+          localStorage.clear();
+          await Swal.fire(
+            'Wrong Email',
+            `This student is registered with:\n\n${student.email}\n\nPlease sign in with the correct email.`,
+            'error'
+          );
+          return; // stop here
         }
+        // ✅ All good → save & continue
         localStorage.setItem('studentsId', user.uid);
         localStorage.setItem('schoolId', schoolId);
         localStorage.setItem('studentInfo', JSON.stringify(student));
         if (setStudentInfo) setStudentInfo(student);
         navigate('/exam');
       } else if (!isExisting) {
+        // ✅ Register new student with this Google email
         const studentRef = doc(studentsRef);
         const student = {
           name,
           grade: `Grade ${grade}`,
           subjects,
-          email: user.email,
+          email: user.email, // bind Google email
           schoolId,
           schoolName: schoolData.name,
           district: schoolData.district,
@@ -305,64 +315,72 @@ export default function LandingPage({ setStudentInfo }) {
       Swal.fire('Oops!', err.message, 'error');
     }
   };
-
-  const handleRoleClick = async (role) => {
-    const { value: schoolId } = await Swal.fire({
-      title: `Select School for ${role}`,
-      input: 'select',
-      inputOptions: schools.reduce((acc, s) => {
-        acc[s.id] = s.name;
-        return acc;
-      }, {}),
-      inputPlaceholder: 'Select school',
-      showCancelButton: true,
-    });
-    if (!schoolId) return;
-
-    const confirm = await Swal.fire({
-      title: `${role.charAt(0).toUpperCase() + role.slice(1)} Sign In`,
-      text: 'Sign in securely with Google.',
-      icon: 'info',
-      showCancelButton: true,
-    });
-    if (!confirm.isConfirmed) return;
-
-    try {
-      const provider = new GoogleAuthProvider();
-      const res = await signInWithPopup(auth, provider);
-      const user = res.user;
-
-      const ref = doc(db, `schools/${schoolId}/${role}`, user.uid);
-      const snap = await getDoc(ref);
-      if (!snap.exists()) {
-        await setDoc(ref, {
-          name: user.displayName || '',
-          email: user.email || '',
-          schoolId,
-          createdAt: new Date().toISOString(),
-        });
-      }
-
-      localStorage.setItem(`${role}Id`, user.uid);
-      localStorage.setItem('schoolId', schoolId);
-      localStorage.setItem(`${role}Name`, user.displayName || '');
-
-      if (role === 'teachers') navigate('/teacher-dashboard');
-      else if (role === 'parents') navigate('/parent-dashboard');
-      else navigate('/admin');
-
-    } catch (err) {
-      console.error(err);
-      Swal.fire('Oops!', err.message, 'error');
-    }
-  };
-
+  
   const cards = [
     { label: 'Student', gradient: 'from-blue-500 to-blue-700', onClick: handleStudentClick, icon: '🎓' },
     { label: 'Teacher', gradient: 'from-green-500 to-green-700', role: 'teachers', icon: '🧑‍🏫' },
     { label: 'Parent', gradient: 'from-yellow-400 to-yellow-600', role: 'parents', icon: '👨‍👩‍👧' },
     { label: 'Admin', gradient: 'from-red-500 to-red-700', role: 'admins', icon: '🛠️' },
   ];
+
+
+  // ✅ 
+const handleRoleClick = async (role) => {
+  const { value: schoolId } = await Swal.fire({
+    title: `Select School for ${role}`,
+    input: 'select',
+    inputOptions: schools.reduce((acc, s) => {
+      acc[s.id] = s.name;
+      return acc;
+    }, {}),
+    inputPlaceholder: 'Select school',
+    showCancelButton: true,
+  });
+  if (!schoolId) return;
+
+  const confirm = await Swal.fire({
+    title: `${role.charAt(0).toUpperCase() + role.slice(1)} Sign In`,
+    text: 'Sign in securely with Google.',
+    icon: 'info',
+    showCancelButton: true,
+    confirmButtonText: 'Sign In',
+    cancelButtonText: 'Cancel',
+    confirmButtonColor: '#22c55e',
+    cancelButtonColor: '#ef4444',
+  });
+  if (!confirm.isConfirmed) return;
+
+  try {
+    const provider = new GoogleAuthProvider();
+    const res = await signInWithPopup(auth, provider);
+    const user = res.user;
+
+    // ✅ Save under the school/role path
+    const ref = doc(db, `schools/${schoolId}/${role}`, user.uid);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      await setDoc(ref, {
+        name: user.displayName || '',
+        email: user.email || '',
+        schoolId,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    localStorage.setItem(`${role}Id`, user.uid);
+    localStorage.setItem('schoolId', schoolId);
+    localStorage.setItem(`${role}Name`, user.displayName || '');
+
+    // ✅ Route
+    if (role === 'teachers') navigate('/teacher-dashboard');
+    else if (role === 'parents') navigate('/parent-dashboard');
+    else navigate('/admin');
+
+  } catch (err) {
+    console.error(err);
+    Swal.fire('Oops!', err.message, 'error');
+  }
+};
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden">
@@ -373,7 +391,7 @@ export default function LandingPage({ setStudentInfo }) {
           🚀 Amic Learning Hub
         </h1>
         <p className="text-lg md:text-xl text-gray-300 mb-12 max-w-xl">
-          Secure Google Sign-In. Email verified. Subjects you choose show in your dashboard.
+          Secure Google Sign-In. Email verified. Revolutionalized & modernized education system for progressive learners.  
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 w-full">
@@ -388,7 +406,7 @@ export default function LandingPage({ setStudentInfo }) {
               <div className="w-24 h-24 mx-auto rounded-full flex items-center justify-center border-4 border-white text-4xl shadow-inner bg-white/10">
                 {card.icon}
               </div>
-              <p className="mt-5 text-2xl font-bold tracking-wide text-white drop-shadow">{card.label} Login</p>
+              <p className="mt-5 text-2xl font-bold tracking-wide text-white drop-shadow">{card.label} </p>
             </div>
           ))}
         </div>

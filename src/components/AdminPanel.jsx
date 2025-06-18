@@ -1,14 +1,41 @@
-// ✅ AdminPanel.jsx — password removed, name only
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import { addDoc, collection } from 'firebase/firestore';
+import { db } from '../utils/firebase';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
   const [adminName, setAdminName] = useState('');
 
-  // ✅ Ask for admin NAME only — NO password
+  // ✅ Eastern Cape districts & subjects
+  const DISTRICTS = [
+    'Amathole',
+    'Buffalo City',
+    'Chris Hani',
+    'Joe Gqabi',
+    'Nelson Mandela Bay',
+    'OR Tambo',
+    'Sarah Baartman'
+  ];
+
+  const SUBJECTS = [
+    'Mathematics',
+    'English',
+    'CAT',
+    'LO',
+    'History',
+    'Geography',
+    'Physics',
+    'Business',
+    'Creative Arts',
+    'Xhosa',
+    'Afrikaans'
+  ];
+
+  const GRADES = ['Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+
+  // ✅ Prompt for admin name
   useEffect(() => {
     const savedAdmin = localStorage.getItem('adminName');
 
@@ -16,10 +43,10 @@ export default function AdminPanel() {
       setAdminName(savedAdmin);
     } else {
       Swal.fire({
-        title: 'Admin Login',
-        text: 'Enter admin name to access the panel',
+        title: 'School Admin Login',
+        text: 'Enter your name to access the panel',
         input: 'text',
-        inputPlaceholder: 'e.g. Mr. Nkosi',
+        inputPlaceholder: 'e.g. Mr. Moyo',
         confirmButtonText: 'Login',
         allowOutsideClick: false,
         inputValidator: (value) => {
@@ -49,27 +76,120 @@ export default function AdminPanel() {
     });
   };
 
+  const handleRegisterSchool = async () => {
+    // ✅ Get school name
+    const { value: schoolName } = await Swal.fire({
+      title: 'Enter School Name',
+      input: 'text',
+      inputPlaceholder: 'e.g. Sunshine High School',
+      showCancelButton: true
+    });
+    if (!schoolName) return;
+
+    // ✅ Select District
+    const { value: district } = await Swal.fire({
+      title: 'Select District',
+      input: 'select',
+      inputOptions: DISTRICTS.reduce((acc, d) => {
+        acc[d] = d;
+        return acc;
+      }, {}),
+      inputPlaceholder: 'Choose district',
+      showCancelButton: true
+    });
+    if (!district) return;
+
+    // ✅ Select Grades
+    const { value: selectedGrades } = await Swal.fire({
+      title: 'Select Grades Offered',
+      html: GRADES.map(g => `<label><input type="checkbox" value="${g}"> ${g}</label><br/>`).join(''),
+      preConfirm: () => {
+        const selected = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+        if (selected.length === 0) Swal.showValidationMessage('Select at least one grade.');
+        return selected;
+      },
+      showCancelButton: true
+    });
+    if (!selectedGrades) return;
+
+    // ✅ Select Subjects
+    const { value: selectedSubjects } = await Swal.fire({
+      title: 'Select Subjects Offered',
+      html: SUBJECTS.map(s => `<label><input type="checkbox" value="${s}"> ${s}</label><br/>`).join(''),
+      preConfirm: () => {
+        const selected = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+        if (selected.length === 0) Swal.showValidationMessage('Select at least one subject.');
+        return selected;
+      },
+      showCancelButton: true
+    });
+    if (!selectedSubjects) return;
+
+    // ✅ Add teachers per subject
+    const teachers = [];
+    for (const subject of selectedSubjects) {
+      const { value: teacherName } = await Swal.fire({
+        title: `Teacher for ${subject}`,
+        input: 'text',
+        inputPlaceholder: 'e.g. Ms. Zulu',
+        showCancelButton: true
+      });
+      if (!teacherName) continue;
+
+      const { value: teacherEmail } = await Swal.fire({
+        title: `Email for ${teacherName}`,
+        input: 'email',
+        inputPlaceholder: 'teacher@example.com',
+        showCancelButton: true
+      });
+      if (!teacherEmail) continue;
+
+      teachers.push({ name: teacherName, email: teacherEmail, subject });
+    }
+
+    // ✅ Save to Firestore
+    await addDoc(collection(db, 'schools'), {
+      name: schoolName,
+      province: 'Eastern Cape',
+      district,
+      grades: selectedGrades,
+      subjects: selectedSubjects,
+      teachers,
+      createdBy: adminName,
+      createdAt: new Date().toISOString()
+    });
+
+    Swal.fire('Success', 'School & teachers registered!', 'success');
+  };
+
   const sections = [
+    {
+      title: 'Register New School',
+      description: 'Add a new school, its grades, subjects & teachers.',
+      action: handleRegisterSchool,
+      icon: '🏫',
+      color: 'bg-blue-100'
+    },
     {
       title: 'Teacher Dashboard',
       description: 'Add exams and manage questions.',
       path: '/teacher-dashboard',
       icon: '🧑‍🏫',
-      color: 'bg-blue-100'
+      color: 'bg-green-100'
     },
     {
       title: 'All Results',
       description: 'View and mark student exams.',
       path: '/all-results',
       icon: '📊',
-      color: 'bg-green-100'
+      color: 'bg-yellow-100'
     },
     {
       title: 'Exam Manager',
       description: 'Edit or delete created exams.',
       path: '/exam-manager',
       icon: '🗂️',
-      color: 'bg-yellow-100'
+      color: 'bg-purple-100'
     }
   ];
 
@@ -91,7 +211,7 @@ export default function AdminPanel() {
         {sections.map((section, i) => (
           <div
             key={i}
-            onClick={() => navigate(section.path)}
+            onClick={() => section.action ? section.action() : navigate(section.path)}
             className={`cursor-pointer rounded-lg shadow-md p-6 transition transform hover:scale-105 ${section.color}`}
           >
             <div className="text-4xl mb-3 text-center">{section.icon}</div>
